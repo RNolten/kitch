@@ -355,6 +355,24 @@ async function router() {
     profile = data;
   }
 
+  // Check voor Stripe betaling redirect (?payment=success&...)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment') === 'success') {
+    const sessionId = urlParams.get('session_id');
+    const monteurId = urlParams.get('monteur_id');
+    const app = document.getElementById('app');
+    app.innerHTML = navHTML() + `<main><div class="spin-wrap" style="flex-direction:column;gap:16px">
+      <div class="spin"></div>
+      <div style="font-size:14px;color:var(--gray-4)">Betaling verifiëren…</div>
+    </div></main>`;
+    if (sessionId && monteurId && user) {
+      await verifyPayment(sessionId, monteurId, user.id);
+    }
+    history.replaceState(null, '', window.location.pathname);
+    location.hash = '#monteur/' + monteurId;
+    return;
+  }
+
   const hash = location.hash.slice(1) || '/';
   const parts = hash.split('/').filter(Boolean);
   const route = parts[0] || '';
@@ -1011,7 +1029,20 @@ async function pageMonteurProfiel(el, id) {
     .order('created_at', { ascending: false })
     .limit(5);
 
-  const contactUnlocked = false; // later: check of koper betaald heeft
+  // Check of koper al betaald heeft voor deze monteur
+  let contactUnlocked = false;
+  if (user) {
+    if (user.id === id) {
+      contactUnlocked = true; // eigen profiel
+    } else {
+      const { data: payment } = await db.from('payments')
+        .select('id')
+        .eq('buyer_id', user.id)
+        .eq('monteur_id', id)
+        .maybeSingle();
+      contactUnlocked = !!payment;
+    }
+  }
 
   el.innerHTML = `<div class="page" style="max-width:680px">
     <button class="back" onclick="history.back()">← Terug</button>
@@ -1048,8 +1079,8 @@ async function pageMonteurProfiel(el, id) {
           </div>
           <div style="margin-top:12px;padding:14px;background:#FFF7ED;border-radius:10px;border:1.5px solid #FED7AA">
             <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px">🔒 Contactgegevens zijn vergrendeld</div>
-            <div style="font-size:13px;color:#92400E;margin-bottom:12px">Kies een keuken en betaal de servicefee om in contact te komen met deze monteur.</div>
-            <button class="btn btn-primary btn-sm" onclick="go('')">Keukens bekijken</button>
+            <div style="font-size:13px;color:#92400E;margin-bottom:12px">Betaal de eenmalige servicefee van €9,95 om de contactgegevens van deze monteur te zien.</div>
+            <button id="checkout-btn" class="btn btn-primary" style="width:100%;justify-content:center" onclick="startCheckout('${id}')">🔓 Ontgrendel contact — €9,95</button>
           </div>
         </div>
       `}
@@ -1070,6 +1101,57 @@ async function pageMonteurProfiel(el, id) {
         </div>`).join('')}
     </div>` : ''}
   </div>`;
+}
+
+// ── STRIPE BETAALFLOW ─────────────────────────────────────
+window.startCheckout = async (monteurId) => {
+  if (!user) { go('login'); return; }
+  const btn = document.getElementById('checkout-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spin" style="width:16px;height:16px;border-width:2px"></div> Laden…`;
+  }
+  try {
+    const res = await fetch(`${SB_URL}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+      },
+      body: JSON.stringify({
+        monteur_id: monteurId,
+        buyer_id: user.id,
+        origin: window.location.origin,
+      }),
+    });
+    const { url, error } = await res.json();
+    if (error) throw new Error(error);
+    window.location.href = url;
+  } catch (e) {
+    alert('Er ging iets mis: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔓 Ontgrendel contact — €9,95'; }
+  }
+};
+
+async function verifyPayment(sessionId, monteurId, buyerId) {
+  try {
+    await fetch(`${SB_URL}/functions/v1/verify-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        monteur_id: monteurId,
+        buyer_id: buyerId,
+      }),
+    });
+  } catch (e) {
+    console.error('Betaling verifiëren mislukt:', e);
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────
