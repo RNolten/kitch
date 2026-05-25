@@ -638,6 +638,13 @@ window.submitListing = async () => {
   fa.innerHTML = '';
 
   try {
+    // Zorg dat profiel bestaat (vangnet als trigger niet vuurde)
+    await db.from('profiles').upsert({
+      id: user.id,
+      name: profile?.name || user.email?.split('@')[0] || '',
+      role: profile?.role || 'aanbieder'
+    }, { onConflict: 'id' });
+
     const { data: listing, error: le } = await db.from('listings').insert({
       user_id: user.id, title, price, city,
       brand: v('f_b') || null, color: v('f_c') || null,
@@ -714,9 +721,13 @@ async function pageLogin(el) {
         const role = document.querySelector('.role-opt.sel')?.dataset?.r || 'koper';
         const { data, error: e } = await db.auth.signUp({ email, password: pw, options: { data: { name } } });
         if (e) throw e;
-        await db.from('profiles').upsert({ id: data.user.id, name, role });
-        aa.innerHTML = `<div class="alert alert-ok">✅ Account aangemaakt! Je kunt nu inloggen.</div>`;
-        tab = 'login'; draw();
+        if (data.user) {
+          await db.from('profiles').upsert({ id: data.user.id, name, role });
+          go('');
+        } else {
+          aa.innerHTML = `<div class="alert alert-ok">✅ Bevestig je account via de e-mail die we je gestuurd hebben, dan kun je inloggen.</div>`;
+          tab = 'login'; draw();
+        }
       }
     } catch (e) { aa.innerHTML = err(e.message); ab.disabled = false; }
   };
