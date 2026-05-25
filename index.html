@@ -424,7 +424,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const { createClient } = supabase;
 const db = createClient(SB_URL, SB_KEY);
 
-let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [];
+let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [], pendingApparatuur = [];
 
 // ── ROUTER ────────────────────────────────────────────────
 async function router() {
@@ -636,7 +636,16 @@ async function pageDetail(el, id) {
     l.incl_spoelbak    && { icon: '✅', v: 'Inclusief spoelbak' },
   ].filter(Boolean);
 
-  const apparatuurItems = l.apparatuur ? l.apparatuur.split(', ').filter(Boolean) : [];
+  let apparatuurItems = [];
+  try {
+    if (l.apparatuur) {
+      const parsed = JSON.parse(l.apparatuur);
+      apparatuurItems = Array.isArray(parsed) ? parsed : l.apparatuur.split(', ').map(s => ({ type: s }));
+    }
+  } catch(e) {
+    // backward compat: old comma-separated string
+    apparatuurItems = l.apparatuur ? l.apparatuur.split(', ').filter(Boolean).map(s => ({ type: s })) : [];
+  }
 
   el.innerHTML = `<div class="page">
     <button class="back" onclick="go('')">← Terug naar overzicht</button>
@@ -649,8 +658,15 @@ async function pageDetail(el, id) {
         </div>` : ''}
         ${apparatuurItems.length ? `<div class="desc-block">
           <h3>Apparatuur inbegrepen</h3>
-          <div class="app-tags">
-            ${apparatuurItems.map(a => `<span class="app-tag">✓ ${esc(a)}</span>`).join('')}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            ${apparatuurItems.map(a => `
+              <div style="padding:10px 12px;background:var(--gray-1);border-radius:var(--r-sm);border:1px solid var(--gray-2)">
+                <div style="font-size:13px;font-weight:700">✓ ${esc(a.type || a)}</div>
+                ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).length ? `
+                  <div style="font-size:11px;color:var(--gray-4);margin-top:3px">
+                    ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).map(t => esc(t)).join(' · ')}
+                  </div>` : ''}
+              </div>`).join('')}
           </div>
         </div>` : ''}
         ${praktisch.length ? `<div class="desc-block">
@@ -748,6 +764,7 @@ async function pageAanbieden(el) {
 
   pendingPhotos = [];
   pendingTekeningen = [];
+  pendingApparatuur = [];
 
   const chips = (group, options) => options.map(v =>
     `<div class="chip" data-group="${group}" data-val="${v}" onclick="selChip(this)">${v}</div>`
@@ -824,24 +841,30 @@ async function pageAanbieden(el) {
 
     <div class="form-card">
       <div class="form-card-title">⚙️ Apparatuur inbegrepen</div>
-      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Selecteer wat er bij de keuken inbegrepen is.</div>
-      <div class="check-grid">
-        ${[
-          ['app_oven','🔲 Oven'],
-          ['app_magnet','📡 Magnetron'],
-          ['app_combi','🔄 Combimagnetron'],
-          ['app_koelkast','🧊 Koelkast'],
-          ['app_vriezer','❄️ Vriezer'],
-          ['app_vaatwasser','🫧 Vaatwasser'],
-          ['app_inductie','⚡ Inductiekookplaat'],
-          ['app_gas','🔥 Gaskookplaat'],
-          ['app_ceran','◼️ Ceranfeldkookplaat'],
-          ['app_afzuig','💨 Afzuigkap'],
-          ['app_wijn','🍷 Wijnklimaatkast'],
-          ['app_quooker','💧 Quooker / kokendwater'],
-        ].map(([id, label]) =>
-          `<label class="check-item"><input type="checkbox" id="${id}"> ${label}</label>`
-        ).join('')}
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Voeg elk apparaat toe met merk, kleur en kenmerken. Monteurs waarderen dit enorm.</div>
+      <div id="app-list"></div>
+      <div style="background:var(--gray-1);border-radius:var(--r-md);padding:16px">
+        <div class="row2" style="margin-bottom:0">
+          <div class="fg"><label class="fl">Type</label>
+            <select id="app_type" class="fi fs" style="cursor:pointer">
+              <option value="">Kies type…</option>
+              <option>Oven</option><option>Magnetron</option><option>Combimagnetron</option>
+              <option>Koelkast</option><option>Vriezer</option><option>Vaatwasser</option>
+              <option>Inductiekookplaat</option><option>Gaskookplaat</option><option>Ceranfeldkookplaat</option>
+              <option>Afzuigkap</option><option>Wijnklimaatkast</option><option>Quooker / kokendwater</option>
+              <option>Overig</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Merk</label>
+            <input id="app_merk" class="fi" placeholder="Bosch, Siemens, AEG…"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label class="fl">Kleur / uitvoering</label>
+            <input id="app_kleur" class="fi" placeholder="RVS, zwart, wit…"></div>
+          <div class="fg"><label class="fl">Model / kenmerken</label>
+            <input id="app_kenm" class="fi" placeholder="HBG675, 4-pits, pyrolyse…"></div>
+        </div>
+        <button type="button" onclick="addApparaat()" class="btn btn-primary btn-sm">+ Apparaat toevoegen</button>
       </div>
     </div>
 
@@ -947,6 +970,44 @@ window.rmTekening = i => {
   renderTekenList();
 };
 
+function renderApparaatList() {
+  const el = document.getElementById('app-list');
+  if (!el) return;
+  el.innerHTML = pendingApparatuur.length ? pendingApparatuur.map((a, i) => `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+      padding:10px 12px;background:white;border:1px solid var(--gray-2);border-radius:var(--r-sm);margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:700">✓ ${esc(a.type)}</div>
+        ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).length ? `
+          <div style="font-size:12px;color:var(--gray-4);margin-top:3px">
+            ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).map(t => esc(t)).join(' · ')}
+          </div>` : ''}
+      </div>
+      <button onclick="rmApparaat(${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-4);font-size:18px;padding:0 2px;flex-shrink:0;line-height:1">×</button>
+    </div>`).join('') : '';
+}
+
+window.addApparaat = () => {
+  const type = document.getElementById('app_type')?.value;
+  if (!type) { alert('Kies eerst een type apparaat.'); return; }
+  pendingApparatuur.push({
+    type,
+    merk:      document.getElementById('app_merk')?.value.trim()  || '',
+    kleur:     document.getElementById('app_kleur')?.value.trim() || '',
+    kenmerken: document.getElementById('app_kenm')?.value.trim()  || '',
+  });
+  ['app_type','app_merk','app_kleur','app_kenm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderApparaatList();
+};
+
+window.rmApparaat = i => {
+  pendingApparatuur.splice(i, 1);
+  renderApparaatList();
+};
+
 function photoGridHTML() {
   return Array.from({ length: 6 }, (_, i) => {
     if (i < pendingPhotos.length) return `
@@ -994,13 +1055,7 @@ window.submitListing = async () => {
     document.querySelector(`.chip[data-group="${group}"].sel`)?.getAttribute('data-val') || null;
   const isOn = id => document.getElementById(id)?.classList.contains('on') || false;
 
-  const appMap = [
-    ['app_oven','Oven'],['app_magnet','Magnetron'],['app_combi','Combimagnetron'],
-    ['app_koelkast','Koelkast'],['app_vriezer','Vriezer'],['app_vaatwasser','Vaatwasser'],
-    ['app_inductie','Inductiekookplaat'],['app_gas','Gaskookplaat'],['app_ceran','Ceranfeldkookplaat'],
-    ['app_afzuig','Afzuigkap'],['app_wijn','Wijnklimaatkast'],['app_quooker','Quooker'],
-  ];
-  const checkedApp = appMap.filter(([id]) => document.getElementById(id)?.checked).map(([,lbl]) => lbl);
+  const checkedApp = pendingApparatuur;
 
   const sb = document.getElementById('sb');
   sb.disabled = true;
@@ -1026,7 +1081,7 @@ window.submitListing = async () => {
       conditie: chipVal('conditie'),
       materiaal_blad: chipVal('materiaal_blad'),
       leeftijd_jaar: parseInt(v('f_age')) || null,
-      apparatuur: checkedApp.length ? checkedApp.join(', ') : null,
+      apparatuur: checkedApp.length ? JSON.stringify(checkedApp) : null,
       demontage: chipVal('demontage'),
       ophalen_bezorgen: chipVal('ophalen_bezorgen'),
       incl_bovenkasten: isOn('tgl_boven'),
