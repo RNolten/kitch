@@ -357,6 +357,12 @@ async function router() {
 
   // Check voor Stripe betaling redirect (?payment=success&...)
   const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment') === 'cancelled') {
+    const monteurId = urlParams.get('monteur_id');
+    history.replaceState(null, '', window.location.pathname);
+    location.hash = '#monteur/' + monteurId;
+    return;
+  }
   if (urlParams.get('payment') === 'success') {
     const sessionId = urlParams.get('session_id');
     const monteurId = urlParams.get('monteur_id');
