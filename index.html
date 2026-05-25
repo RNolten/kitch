@@ -1,795 +1,794 @@
+
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KeukenCheck</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KitchKitch — Tweedehands keukens</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            min-height: 100vh;
-            color: #1e293b;
-        }
+    :root {
+      --bg: #FAFAF7;
+      --white: #FFFFFF;
+      --black: #1C1C1E;
+      --accent: #FF6B35;
+      --accent-dark: #E55A25;
+      --gray-1: #F2F2F7;
+      --gray-2: #E5E5EA;
+      --gray-3: #C7C7CC;
+      --gray-4: #8E8E93;
+      --gray-5: #636366;
+      --green: #30D158;
+      --red: #FF453A;
+      --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+      --sh-sm: 0 1px 3px rgba(0,0,0,0.07);
+      --sh-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
 
-        /* === HEADER === */
-        .header {
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 0 24px;
-            height: 58px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
-        .logo .accent { color: #f97316; }
-        .step-pills { display: flex; gap: 5px; align-items: center; }
-        .step-pill {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #e2e8f0; transition: background 0.3s;
-        }
-        .step-pill.active { background: #f97316; width: 22px; border-radius: 4px; }
-        .step-pill.done { background: #22c55e; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--black); min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-        /* === LAYOUT === */
-        .container { max-width: 680px; margin: 36px auto; padding: 0 20px; }
+    /* NAV */
+    nav {
+      background: var(--white); border-bottom: 1px solid var(--gray-2);
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+      cursor: pointer; color: var(--black); text-decoration: none;
+    }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      padding: 7px 16px; border-radius: 20px; font-size: 14px;
+      font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ghost { background: var(--gray-1); color: var(--black); }
+    .btn-ghost:hover { background: var(--gray-2); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-danger { background: #FFF0F0; color: var(--red); }
+    .btn-danger:hover { background: #FFE0E0; }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
 
-        /* === CARD === */
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 28px 32px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.04);
-        }
-        .card-title { font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #0f172a; }
-        .card-subtitle { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.55; }
+    /* LAYOUT */
+    main { min-height: calc(100vh - 60px); }
+    .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .page-narrow { max-width: 540px; margin: 0 auto; padding: 32px 24px; }
 
-        /* === FORM === */
-        .form-group { margin-bottom: 18px; }
-        .form-label {
-            display: block; font-size: 11px; font-weight: 700;
-            color: #94a3b8; margin-bottom: 6px;
-            text-transform: uppercase; letter-spacing: 0.8px;
-        }
-        .form-input {
-            width: 100%; padding: 10px 13px;
-            border: 1.5px solid #e2e8f0; border-radius: 8px;
-            font-size: 14px; outline: none; transition: border-color 0.15s;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            background: #f8fafc;
-        }
-        .form-input:focus { border-color: #f97316; background: white; }
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 72px 24px; text-align: center; color: white;
+    }
+    .hero-eyebrow {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: clamp(30px, 5vw, 52px); font-weight: 800;
+      letter-spacing: -1.5px; margin-bottom: 14px; line-height: 1.1;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-sub {
+      font-size: 16px; color: rgba(255,255,255,0.6);
+      margin-bottom: 36px; line-height: 1.6; max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-btn {
+      padding: 13px 28px; border-radius: 28px; font-size: 15px;
+      font-weight: 700; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .hero-btn-primary { background: var(--accent); color: white; }
+    .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,107,53,0.4); }
+    .hero-btn-outline { background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.25); }
+    .hero-btn-outline:hover { background: rgba(255,255,255,0.1); }
 
-        /* === UPLOAD ZONE === */
-        .upload-zone {
-            border: 2px dashed #cbd5e1; border-radius: 12px;
-            padding: 44px 24px; text-align: center; cursor: pointer;
-            transition: all 0.2s; background: #f8fafc; margin-bottom: 4px;
-        }
-        .upload-zone:hover, .upload-zone.dragover { border-color: #f97316; background: #fff7ed; }
-        .upload-zone.has-file { border-color: #22c55e; border-style: solid; background: #f0fdf4; }
-        .upload-icon { font-size: 44px; margin-bottom: 10px; line-height: 1; }
-        .upload-text { font-size: 15px; font-weight: 600; color: #374151; }
-        .upload-hint { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    /* STATS BAR */
+    .stats-bar {
+      background: white; border-bottom: 1px solid var(--gray-2);
+      padding: 14px 24px; display: flex; justify-content: center; gap: 48px;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 20px; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--gray-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* === BUTTONS === */
-        .btn {
-            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
-            font-size: 14px; font-weight: 600; transition: all 0.15s;
-            display: inline-flex; align-items: center; gap: 7px;
-        }
-        .btn-primary { background: #f97316; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #ea6c0a; box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
-        .btn-secondary { background: #f1f5f9; color: #475569; }
-        .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
-        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-        .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+    /* LISTINGS */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    }
+    .section-title { font-size: 20px; font-weight: 800; }
+    .section-count { font-size: 14px; color: var(--gray-4); }
 
-        /* === LOADING === */
-        .loading { text-align: center; padding: 52px 24px; }
-        .spinner {
-            width: 42px; height: 42px;
-            border: 3px solid #f1f5f9; border-top-color: #f97316;
-            border-radius: 50%; animation: spin 0.75s linear infinite;
-            margin: 0 auto 16px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { font-size: 15px; font-weight: 600; color: #374151; }
-        .loading-sub { font-size: 13px; color: #94a3b8; margin-top: 5px; }
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 20px;
+    }
+    .listing-card {
+      background: white; border-radius: var(--r-lg);
+      overflow: hidden; box-shadow: var(--sh-sm);
+      cursor: pointer; transition: all 0.2s;
+      border: 1px solid var(--gray-2);
+    }
+    .listing-card:hover { box-shadow: var(--sh-md); transform: translateY(-3px); }
+    .listing-img {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover;
+      background: var(--gray-1); display: flex; align-items: center;
+      justify-content: center; font-size: 52px; overflow: hidden;
+    }
+    .listing-img img { width: 100%; height: 100%; object-fit: cover; }
+    .listing-body { padding: 14px 16px 16px; }
+    .listing-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .listing-brand { font-size: 13px; color: var(--gray-4); margin-bottom: 10px; }
+    .listing-dims { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .dim-tag {
+      font-size: 11px; font-weight: 600;
+      background: var(--gray-1); color: var(--gray-5);
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .listing-footer { display: flex; align-items: center; justify-content: space-between; }
+    .listing-price { font-size: 19px; font-weight: 800; }
+    .listing-city { font-size: 12px; color: var(--gray-4); }
 
-        /* === CHECKPOINTS === */
-        .checkpoint-list { display: flex; flex-direction: column; gap: 10px; }
-        .checkpoint-item {
-            border: 1.5px solid #e2e8f0; border-radius: 10px;
-            padding: 14px 16px; display: flex; align-items: flex-start; gap: 13px;
-        }
-        .checkpoint-item.critical { border-color: #fed7aa; background: #fffbf7; }
-        .cp-icon {
-            width: 34px; height: 34px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; flex-shrink: 0; margin-top: 1px;
-        }
-        .cp-icon.elektra { background: #fef9c3; }
-        .cp-icon.water    { background: #dbeafe; }
-        .cp-icon.afvoer   { background: #ede9fe; }
-        .cp-icon.gas      { background: #fce7f3; }
-        .cp-body { flex: 1; min-width: 0; }
-        .cp-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-        .cp-loc  { font-size: 12px; color: #64748b; margin-top: 2px; }
-        .cp-instr { font-size: 12px; color: #94a3b8; margin-top: 3px; font-style: italic; }
-        .critical-badge {
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.4px; color: #ea580c; background: #ffedd5;
-            padding: 3px 8px; border-radius: 20px; flex-shrink: 0; white-space: nowrap;
-        }
-        .checkpoint-count {
-            display: inline-flex; align-items: center; gap: 6px;
-            font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 16px;
-        }
+    /* EMPTY */
+    .empty {
+      text-align: center; padding: 80px 24px; color: var(--gray-4);
+      grid-column: 1 / -1;
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--black); margin-bottom: 6px; }
+    .empty-text { font-size: 14px; line-height: 1.5; }
 
-        /* === CUSTOMER FLOW === */
-        .customer-view { max-width: 420px; margin: 0 auto; }
-        .progress-header { text-align: center; margin-bottom: 20px; }
-        .progress-label { font-size: 13px; color: #94a3b8; font-weight: 500; margin-bottom: 8px; }
-        .progress-bar {
-            width: 100%; height: 4px; background: #e2e8f0;
-            border-radius: 2px; overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%; background: #f97316;
-            border-radius: 2px; transition: width 0.4s ease;
-        }
-        .photo-type-label {
-            display: inline-flex; align-items: center; gap: 6px;
-            font-size: 12px; font-weight: 600; color: #64748b;
-            background: #f1f5f9; padding: 4px 10px; border-radius: 20px;
-            margin-bottom: 10px;
-        }
-        .photo-main-instr {
-            font-size: 17px; font-weight: 700; text-align: center;
-            color: #0f172a; margin-bottom: 6px; line-height: 1.35;
-        }
-        .photo-detail {
-            font-size: 13px; color: #64748b; text-align: center; margin-bottom: 20px;
-        }
-        .photo-upload-area {
-            border: 2px dashed #cbd5e1; border-radius: 16px;
-            padding: 0; text-align: center; cursor: pointer;
-            transition: all 0.2s; background: #f8fafc;
-            min-height: 220px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; overflow: hidden;
-        }
-        .photo-upload-area:hover { border-color: #f97316; background: #fff7ed; }
-        .photo-upload-area.has-photo { border-style: solid; border-color: #22c55e; background: white; }
-        .photo-preview { width: 100%; max-height: 260px; object-fit: contain; display: block; }
-        .camera-icon { font-size: 52px; margin-bottom: 12px; line-height: 1; }
-        .photo-upload-text { font-size: 15px; font-weight: 600; color: #374151; }
-        .photo-upload-hint { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    /* DETAIL */
+    .detail-grid { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
+    .gallery { border-radius: var(--r-lg); overflow: hidden; background: var(--gray-1); aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
+    .gallery img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-empty { font-size: 80px; }
+    .thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+    .thumb {
+      width: 70px; height: 52px; object-fit: cover;
+      border-radius: 7px; cursor: pointer; flex-shrink: 0;
+      border: 2px solid transparent; transition: border-color 0.15s; opacity: 0.7;
+    }
+    .thumb.active { border-color: var(--accent); opacity: 1; }
 
-        /* === REPORT === */
-        .report-summary { display: flex; gap: 12px; margin-bottom: 24px; }
-        .summary-card {
-            flex: 1; padding: 16px 12px; border-radius: 10px; text-align: center;
-        }
-        .summary-card.green  { background: #dcfce7; }
-        .summary-card.orange { background: #ffedd5; }
-        .summary-card.red    { background: #fee2e2; }
-        .summary-number { font-size: 34px; font-weight: 800; line-height: 1; }
-        .summary-card.green  .summary-number { color: #16a34a; }
-        .summary-card.orange .summary-number { color: #ea580c; }
-        .summary-card.red    .summary-number { color: #dc2626; }
-        .summary-label { font-size: 11px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .summary-card.green  .summary-label { color: #16a34a; }
-        .summary-card.orange .summary-label { color: #ea580c; }
-        .summary-card.red    .summary-label { color: #dc2626; }
+    .sticky-card {
+      background: white; border-radius: var(--r-lg); padding: 24px;
+      box-shadow: var(--sh-md); border: 1px solid var(--gray-2);
+      position: sticky; top: 76px;
+    }
+    .detail-price { font-size: 34px; font-weight: 800; margin-bottom: 4px; }
+    .detail-title { font-size: 21px; font-weight: 700; margin-bottom: 6px; line-height: 1.25; }
+    .detail-city { font-size: 14px; color: var(--gray-4); margin-bottom: 18px; }
+    .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .spec { background: var(--gray-1); border-radius: var(--r-sm); padding: 10px 12px; }
+    .spec-lbl { font-size: 10px; font-weight: 700; color: var(--gray-4); text-transform: uppercase; letter-spacing: 0.6px; }
+    .spec-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .cta-btn {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: var(--r-md); font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; margin-bottom: 12px;
+    }
+    .cta-btn:hover { background: var(--accent-dark); }
+    .seller-row {
+      display: flex; align-items: center; gap: 12px;
+      padding-top: 16px; border-top: 1px solid var(--gray-2);
+    }
+    .seller-av {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gray-2); color: var(--gray-5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; flex-shrink: 0;
+    }
+    .seller-name { font-size: 14px; font-weight: 600; }
+    .seller-role { font-size: 12px; color: var(--gray-4); }
+    .desc-block { margin-top: 28px; }
+    .desc-block h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .desc-text { font-size: 14px; color: var(--gray-5); line-height: 1.7; }
 
-        .result-item {
-            border: 1.5px solid #e2e8f0; border-radius: 10px;
-            padding: 14px 16px; display: flex; align-items: flex-start;
-            gap: 12px; margin-bottom: 10px;
-        }
-        .result-item.status-aanwezig    { border-color: #86efac; background: #f0fdf4; }
-        .result-item.status-twijfelachtig { border-color: #fdba74; background: #fff7ed; }
-        .result-item.status-ontbreekt   { border-color: #fca5a5; background: #fef2f2; }
-        .result-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
-        .result-body { flex: 1; min-width: 0; }
-        .result-name { font-size: 14px; font-weight: 600; }
-        .result-expl { font-size: 13px; color: #64748b; margin-top: 3px; line-height: 1.4; }
-        .result-photo {
-            width: 58px; height: 58px; object-fit: cover;
-            border-radius: 7px; flex-shrink: 0; cursor: pointer;
-        }
+    /* FORM */
+    .card {
+      background: white; border-radius: var(--r-lg); padding: 32px;
+      box-shadow: var(--sh-sm); border: 1px solid var(--gray-2);
+    }
+    .card-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .card-sub { font-size: 14px; color: var(--gray-4); margin-bottom: 28px; line-height: 1.5; }
 
-        /* === ALERTS === */
-        .alert {
-            padding: 11px 15px; border-radius: 9px; font-size: 13px;
-            margin-bottom: 20px; line-height: 1.5; display: flex; gap: 8px;
-        }
-        .alert-info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-        .alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .fg { margin-bottom: 18px; }
+    .fl {
+      display: block; font-size: 11px; font-weight: 700; color: var(--gray-5);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px;
+    }
+    .fi, .fs, .ft {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--gray-2);
+      border-radius: var(--r-sm); font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s; background: white;
+    }
+    .fi:focus, .fs:focus, .ft:focus { border-color: var(--accent); }
+    .ft { resize: vertical; min-height: 90px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-        .divider { border: none; border-top: 1px solid #f1f5f9; margin: 22px 0; }
+    /* PHOTO SLOTS */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+    .photo-slot {
+      aspect-ratio: 4/3; border: 2px dashed var(--gray-3);
+      border-radius: var(--r-sm); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; cursor: pointer;
+      transition: all 0.15s; overflow: hidden; position: relative;
+      background: var(--gray-1);
+    }
+    .photo-slot:hover { border-color: var(--accent); background: #FFF3EF; }
+    .photo-slot.filled { border-style: solid; border-color: var(--gray-2); }
+    .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .slot-icon { font-size: 22px; }
+    .slot-text { font-size: 10px; color: var(--gray-4); margin-top: 4px; }
+    .rm-btn {
+      position: absolute; top: 4px; right: 4px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); color: white;
+      border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+    }
 
-        @media (max-width: 480px) {
-            .container { padding: 0 12px; margin: 16px auto; }
-            .card { padding: 20px 18px; }
-            .report-summary { flex-direction: column; }
-        }
+    .submit-btn {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: var(--r-md); font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 8px; transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        @media print {
-            .header { display: none; }
-            .btn-row { display: none; }
-            .card { box-shadow: none; }
-        }
-    </style>
+    /* AUTH */
+    .tabs { display: flex; margin-bottom: 28px; border-bottom: 1.5px solid var(--gray-2); }
+    .tab {
+      flex: 1; padding: 12px; text-align: center; font-size: 15px; font-weight: 600;
+      cursor: pointer; color: var(--gray-4);
+      border-bottom: 2.5px solid transparent; margin-bottom: -1.5px; transition: all 0.15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .role-opt {
+      border: 2px solid var(--gray-2); border-radius: var(--r-md); padding: 14px 8px;
+      text-align: center; cursor: pointer; transition: all 0.15s;
+    }
+    .role-opt:hover { border-color: var(--accent); }
+    .role-opt.sel { border-color: var(--accent); background: #FFF3EF; }
+    .role-opt .ri { font-size: 26px; margin-bottom: 6px; }
+    .role-opt .rl { font-size: 12px; font-weight: 600; color: var(--gray-5); }
+
+    /* MY ACCOUNT */
+    .my-item {
+      background: white; border: 1px solid var(--gray-2); border-radius: var(--r-md);
+      padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; margin-bottom: 10px;
+    }
+    .my-thumb {
+      width: 80px; height: 60px; border-radius: 8px; flex-shrink: 0;
+      object-fit: cover; background: var(--gray-1);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden;
+    }
+    .my-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .my-body { flex: 1; min-width: 0; }
+    .my-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+    .my-meta { font-size: 13px; color: var(--gray-4); margin-bottom: 8px; }
+    .my-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .s-actief { background: #D1FAE5; color: #065F46; }
+    .s-gereserveerd { background: #FEF3C7; color: #92400E; }
+    .s-verkocht { background: var(--gray-1); color: var(--gray-4); }
+
+    /* MISC */
+    .back {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 14px; font-weight: 600; color: var(--gray-5);
+      cursor: pointer; background: none; border: none; padding: 0; margin-bottom: 24px;
+    }
+    .back:hover { color: var(--black); }
+    .spin-wrap { display: flex; align-items: center; justify-content: center; padding: 80px; }
+    .spin {
+      width: 36px; height: 36px; border: 3px solid var(--gray-2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .alert {
+      padding: 11px 14px; border-radius: var(--r-sm); font-size: 14px;
+      margin-bottom: 16px; line-height: 1.5;
+    }
+    .alert-err { background: #FFF0F0; color: #C00; border: 1px solid #FFD0D0; }
+    .alert-ok { background: #F0FFF4; color: #065F46; border: 1px solid #BBF7D0; }
+    .divider { border: none; border-top: 1px solid var(--gray-2); margin: 20px 0; }
+
+    @media (max-width: 768px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      .sticky-card { position: static; }
+      .stats-bar { gap: 24px; }
+    }
+    @media (max-width: 540px) {
+      nav { padding: 0 16px; }
+      .page, .page-narrow { padding: 20px 14px; }
+      .card { padding: 20px 16px; }
+      .listings-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .row3 { grid-template-columns: 1fr; }
+      .role-grid { grid-template-columns: 1fr; }
+      .hero { padding: 48px 20px; }
+    }
+  </style>
 </head>
 <body>
-
-<div class="header">
-    <div class="logo">Keuken<span class="accent">Check</span></div>
-    <div class="step-pills" id="stepPills"></div>
-</div>
-
-<div class="container">
-    <div id="root"></div>
-</div>
-
-<!-- Hidden file inputs -->
-<input type="file" id="drawingInput" accept="image/*,.pdf" style="display:none">
-<input type="file" id="photoInput"   accept="image/*" capture="environment" style="display:none">
+<div id="app"><div class="spin-wrap"><div class="spin"></div></div></div>
+<input type="file" id="fileIn" accept="image/*" multiple style="display:none">
 
 <script>
-// ============================================================
-//  STATE
-// ============================================================
-const state = {
-    step: 'setup',
-    apiKey: localStorage.getItem('kc_key') || '',
-    drawing: null,        // { base64, mimeType, filename }
-    checkpoints: [],      // [{id, type, description, location, photo_instruction, critical}]
-    customerStep: 0,
-    photos: {},           // id -> { base64, mimeType, previewUrl }
-    results: {},          // id -> { status, explanation }
-    error: null
+const URL  = 'https://eakmmmylfqqjflnacrub.supabase.co';
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVha21tbXlsZnFxamZsbmFjcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTQyOTcsImV4cCI6MjA5NTI3MDI5N30.TcRayQcLsu3Lg2-Fe1HROyvKSfoZQkkOLbR9EJiKB44';
+const { createClient } = supabase;
+const db = createClient(URL, KEY);
+
+let user = null, profile = null, pendingPhotos = [];
+
+// ── ROUTER ────────────────────────────────────────────────
+async function router() {
+  const { data: { user: u } } = await db.auth.getUser();
+  user = u;
+  if (u) {
+    const { data } = await db.from('profiles').select('*').eq('id', u.id).single();
+    profile = data;
+  }
+
+  const hash = location.hash.slice(1) || '/';
+  const parts = hash.split('/').filter(Boolean);
+  const route = parts[0] || '';
+  const param = parts[1];
+
+  const app = document.getElementById('app');
+  app.innerHTML = navHTML();
+  const main = document.createElement('main');
+  app.appendChild(main);
+
+  if (route === '')            await pageHome(main);
+  else if (route === 'k')      await pageDetail(main, param);
+  else if (route === 'aanbieden') await pageAanbieden(main);
+  else if (route === 'login')  await pageLogin(main);
+  else if (route === 'mijn')   await pageMijn(main);
+  else                         await pageHome(main);
+}
+
+const go = p => location.hash = '#' + p;
+window.addEventListener('hashchange', router);
+window.addEventListener('DOMContentLoaded', router);
+
+// ── NAV ───────────────────────────────────────────────────
+function navHTML() {
+  const init = profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '';
+  return `<nav>
+    <div class="logo" onclick="go('')">Kitch<span>Kitch</span></div>
+    <div class="nav-right">
+      ${user ? `
+        <button class="btn btn-primary" onclick="go('aanbieden')">+ Aanbieden</button>
+        <div class="nav-avatar" onclick="go('mijn')" title="Mijn account">${init}</div>
+      ` : `
+        <button class="btn btn-ghost" onclick="go('login')">Inloggen</button>
+        <button class="btn btn-primary" onclick="go('aanbieden')">Keuken aanbieden</button>
+      `}
+    </div>
+  </nav>`;
+}
+
+// ── HOME ──────────────────────────────────────────────────
+async function pageHome(el) {
+  el.innerHTML = `
+    <div class="hero">
+      <div class="hero-eyebrow">Duurzamer wonen</div>
+      <div class="hero-title">Geef je keuken een<br><span>tweede leven</span></div>
+      <div class="hero-sub">Tweedehands keukens met vakkundige plaatsing.<br>Betaalbaarder, duurzamer, zorgeloos.</div>
+      <div class="hero-cta">
+        <button class="hero-btn hero-btn-primary" onclick="go('aanbieden')">Keuken aanbieden</button>
+        <button class="hero-btn hero-btn-outline" onclick="document.getElementById('ls').scrollIntoView({behavior:'smooth'})">Bekijk keukens ↓</button>
+      </div>
+    </div>
+    <div id="ls" class="page"><div class="spin-wrap"><div class="spin"></div></div></div>`;
+
+  const { data, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false });
+
+  const ls = document.getElementById('ls');
+
+  if (error) { ls.innerHTML = err(error.message); return; }
+
+  if (!data?.length) {
+    ls.innerHTML = `<div class="listings-grid"><div class="empty">
+      <div class="empty-icon">🍳</div>
+      <div class="empty-title">Nog geen keukens</div>
+      <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
+    </div></div>`;
+    return;
+  }
+
+  ls.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Beschikbare keukens</div>
+      <div class="section-count">${data.length} keuken${data.length !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="listings-grid">
+      ${data.map(l => {
+        const photos = sort(l.listing_photos);
+        const img = photos[0]?.url;
+        return `<div class="listing-card" onclick="go('k/${l.id}')">
+          <div class="listing-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '🍳'}</div>
+          <div class="listing-body">
+            <div class="listing-title">${esc(l.title)}</div>
+            <div class="listing-brand">${esc(l.brand || '')}${l.color ? ' · ' + esc(l.color) : ''}</div>
+            ${l.width_cm ? `<div class="listing-dims">
+              <span class="dim-tag">↔ ${l.width_cm}cm</span>
+              ${l.depth_cm ? `<span class="dim-tag">↕ ${l.depth_cm}cm</span>` : ''}
+              ${l.height_cm ? `<span class="dim-tag">↑ ${l.height_cm}cm</span>` : ''}
+            </div>` : '<div style="height:26px"></div>'}
+            <div class="listing-footer">
+              <div class="listing-price">€${l.price.toLocaleString('nl')}</div>
+              <div class="listing-city">📍 ${esc(l.city || '')}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── DETAIL ────────────────────────────────────────────────
+async function pageDetail(el, id) {
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data: l, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index), profiles(name)')
+    .eq('id', id)
+    .single();
+
+  if (error || !l) { el.innerHTML = `<div class="page">${err('Keuken niet gevonden.')}</div>`; return; }
+
+  const photos = sort(l.listing_photos);
+  let active = 0;
+
+  function galleryHTML() {
+    return `
+      <div class="gallery" id="mg">
+        ${photos.length ? `<img src="${photos[active].url}" alt="">` : `<div class="gallery-empty">🍳</div>`}
+      </div>
+      ${photos.length > 1 ? `<div class="thumbs">
+        ${photos.map((p, i) => `<img src="${p.url}" class="thumb${i === active ? ' active' : ''}" onclick="setPhoto(${i})" alt="">`).join('')}
+      </div>` : ''}`;
+  }
+
+  window.setPhoto = i => {
+    active = i;
+    document.getElementById('gw').innerHTML = galleryHTML();
+  };
+
+  const sn = l.profiles?.name || 'Aanbieder';
+  const specs = [
+    l.brand   && { l: 'Merk',    v: l.brand },
+    l.color   && { l: 'Kleur',   v: l.color },
+    l.width_cm  && { l: 'Breedte', v: l.width_cm + ' cm' },
+    l.depth_cm  && { l: 'Diepte',  v: l.depth_cm + ' cm' },
+    l.height_cm && { l: 'Hoogte',  v: l.height_cm + ' cm' },
+  ].filter(Boolean);
+
+  el.innerHTML = `<div class="page">
+    <button class="back" onclick="go('')">← Terug naar overzicht</button>
+    <div class="detail-grid">
+      <div>
+        <div id="gw">${galleryHTML()}</div>
+        ${l.description ? `<div class="desc-block">
+          <h3>Omschrijving</h3>
+          <div class="desc-text">${esc(l.description)}</div>
+        </div>` : ''}
+      </div>
+      <div>
+        <div class="sticky-card">
+          <div class="detail-price">€${l.price.toLocaleString('nl')}</div>
+          <div class="detail-title">${esc(l.title)}</div>
+          <div class="detail-city">📍 ${esc(l.city || 'Locatie onbekend')}</div>
+          ${specs.length ? `<div class="specs">
+            ${specs.map(s => `<div class="spec"><div class="spec-lbl">${s.l}</div><div class="spec-val">${esc(s.v)}</div></div>`).join('')}
+          </div>` : ''}
+          <button class="cta-btn" onclick="contact('${id}')">Ik ben geïnteresseerd</button>
+          <div class="seller-row">
+            <div class="seller-av">${sn[0]?.toUpperCase() || '?'}</div>
+            <div>
+              <div class="seller-name">${esc(sn)}</div>
+              <div class="seller-role">Aanbieder</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.contact = id => {
+  if (!user) { go('login'); return; }
+  alert('Contactfunctie komt binnenkort! We sturen jouw interesse door naar de aanbieder.');
 };
 
-const STEPS = ['setup', 'upload', 'review', 'customer', 'report'];
-
-// ============================================================
-//  RENDER DISPATCHER
-// ============================================================
-function render() {
-    updatePills();
-    const root = document.getElementById('root');
-    const map = {
-        setup:     renderSetup,
-        upload:    renderUpload,
-        analyzing: renderAnalyzing,
-        review:    renderReview,
-        customer:  renderCustomer,
-        reporting: renderReporting,
-        report:    renderReport
-    };
-    root.innerHTML = (map[state.step] || renderSetup)();
-    attachHandlers();
-}
-
-function updatePills() {
-    const visual = { analyzing: 'upload', reporting: 'customer' };
-    const cur = visual[state.step] || state.step;
-    const idx = STEPS.indexOf(cur);
-    document.getElementById('stepPills').innerHTML = STEPS.map((s, i) =>
-        `<div class="step-pill ${i < idx ? 'done' : i === idx ? 'active' : ''}"></div>`
-    ).join('');
-}
-
-// ============================================================
-//  STEPS
-// ============================================================
-
-/* --- SETUP --- */
-function renderSetup() {
-    return `
-    <div class="card">
-        <div class="card-title">Welkom bij KeukenCheck</div>
-        <div class="card-subtitle">Upload een technische keukentekening. De app leest alle aansluitpunten uit en stuurt de klant door een simpele fotoreeks. Jij krijgt een stoplichtrapport terug vóór de montage.</div>
-
-        <div class="alert alert-info">ℹ️ Voor de AI-analyse is een Anthropic API-sleutel nodig. Je vindt die op <strong>console.anthropic.com</strong>.</div>
-
-        <div class="form-group">
-            <label class="form-label">API-sleutel</label>
-            <input type="password" class="form-input" id="apiKeyInput"
-                   placeholder="sk-ant-api03-…"
-                   value="${state.apiKey}" autocomplete="off">
-        </div>
-
-        <div class="btn-row" style="justify-content:flex-start; margin-top:8px;">
-            <button class="btn btn-primary" id="setupNextBtn" ${state.apiKey ? '' : 'disabled'}>
-                Verder →
-            </button>
-        </div>
-    </div>`;
-}
-
-/* --- UPLOAD --- */
-function renderUpload() {
-    const has = !!state.drawing;
-    return `
-    <div class="card">
-        <div class="card-title">Technische tekening</div>
-        <div class="card-subtitle">Upload de installatietekening van de keuken. We analyseren automatisch alle elektra- en wateraansluitpunten.</div>
-
-        ${state.error ? `<div class="alert alert-error">⚠️ ${state.error}</div>` : ''}
-
-        <div class="upload-zone ${has ? 'has-file' : ''}" id="uploadZone">
-            ${has ? `
-                <div class="upload-icon">✅</div>
-                <div class="upload-text">${state.drawing.filename}</div>
-                <div class="upload-hint">Klik om een ander bestand te kiezen</div>
-            ` : `
-                <div class="upload-icon">📐</div>
-                <div class="upload-text">Sleep de tekening hierheen</div>
-                <div class="upload-hint">of klik om te bladeren · PNG, JPG of PDF</div>
-            `}
-        </div>
-
-        <div class="btn-row">
-            <button class="btn btn-secondary" id="backSetupBtn">← Terug</button>
-            <button class="btn btn-primary" id="analyzeBtn" ${has ? '' : 'disabled'}>
-                Analyseer tekening →
-            </button>
-        </div>
-    </div>`;
-}
-
-/* --- ANALYZING --- */
-function renderAnalyzing() {
-    return `
-    <div class="card">
-        <div class="loading">
-            <div class="spinner"></div>
-            <div class="loading-text">Tekening wordt geanalyseerd…</div>
-            <div class="loading-sub">Dit duurt meestal 10–20 seconden</div>
-        </div>
-    </div>`;
-}
-
-/* --- REVIEW --- */
-function renderReview() {
-    const icons = { elektra: '⚡', water: '💧', afvoer: '🔧', gas: '🔥' };
-    return `
-    <div class="card">
-        <div class="card-title">Gevonden aansluitpunten</div>
-        <div class="card-subtitle">Controleer of de lijst klopt. Daarna genereren we de fotoreeks voor de klant.</div>
-
-        <div class="checkpoint-count">
-            <span>📋</span> ${state.checkpoints.length} aansluitpunten gevonden
-        </div>
-
-        <div class="checkpoint-list">
-            ${state.checkpoints.map(cp => `
-            <div class="checkpoint-item ${cp.critical ? 'critical' : ''}">
-                <div class="cp-icon ${cp.type}">${icons[cp.type] || '🔌'}</div>
-                <div class="cp-body">
-                    <div class="cp-name">${cp.description}</div>
-                    <div class="cp-loc">📍 ${cp.location}</div>
-                    <div class="cp-instr">📸 "${cp.photo_instruction}"</div>
-                </div>
-                ${cp.critical ? '<div class="critical-badge">Kritiek</div>' : ''}
-            </div>`).join('')}
-        </div>
-
-        <div class="btn-row">
-            <button class="btn btn-secondary" id="reuploadBtn">← Andere tekening</button>
-            <button class="btn btn-primary" id="startCustomerBtn">Start klantcheck →</button>
-        </div>
-    </div>`;
-}
-
-/* --- CUSTOMER --- */
-function renderCustomer() {
-    const total = state.checkpoints.length;
-    const i = state.customerStep;
-
-    if (i >= total) {
-        return `<div class="card customer-view">
-            <div class="loading">
-                <div class="spinner"></div>
-                <div class="loading-text">Even geduld…</div>
-            </div>
-        </div>`;
-    }
-
-    const cp = state.checkpoints[i];
-    const photo = state.photos[cp.id];
-    const typeLabels = { elektra: 'Elektra', water: 'Water', afvoer: 'Afvoer', gas: 'Gas' };
-    const icons = { elektra: '⚡', water: '💧', afvoer: '🔧', gas: '🔥' };
-
-    return `
-    <div class="card customer-view">
-        <div class="progress-header">
-            <div class="progress-label">Foto ${i + 1} van ${total}</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:${(i / total) * 100}%"></div>
-            </div>
-        </div>
-
-        <div style="text-align:center; margin-bottom:14px;">
-            <div class="photo-type-label">${icons[cp.type] || '🔌'} ${typeLabels[cp.type] || cp.type}</div>
-            <div class="photo-main-instr">${cp.photo_instruction}</div>
-            <div class="photo-detail">${cp.description}</div>
-        </div>
-
-        <div class="photo-upload-area ${photo ? 'has-photo' : ''}" id="photoArea">
-            ${photo
-                ? `<img src="${photo.previewUrl}" class="photo-preview" alt="Foto">`
-                : `<div class="camera-icon">📷</div>
-                   <div class="photo-upload-text">Tik om een foto te maken</div>
-                   <div class="photo-upload-hint">of kies uit je bibliotheek</div>`
-            }
-        </div>
-
-        ${state.error ? `<div class="alert alert-error" style="margin-top:14px;">⚠️ ${state.error}</div>` : ''}
-
-        <div class="btn-row" style="justify-content:space-between; margin-top:18px;">
-            ${i > 0
-                ? `<button class="btn btn-secondary" id="prevPhotoBtn">← Vorige</button>`
-                : `<div></div>`}
-            <button class="btn btn-primary" id="nextPhotoBtn" ${photo ? '' : 'disabled'}>
-                ${i === total - 1 ? 'Controleer ✓' : 'Volgende →'}
-            </button>
-        </div>
-    </div>`;
-}
-
-/* --- REPORTING --- */
-function renderReporting() {
-    const done = Object.keys(state.results).length;
-    const total = state.checkpoints.length;
-    return `
-    <div class="card">
-        <div class="loading">
-            <div class="spinner"></div>
-            <div class="loading-text">Foto's worden geanalyseerd…</div>
-            <div class="loading-sub">${done} van ${total} gecontroleerd</div>
-        </div>
-    </div>`;
-}
-
-/* --- REPORT --- */
-function renderReport() {
-    const counts = { aanwezig: 0, twijfelachtig: 0, ontbreekt: 0 };
-    state.checkpoints.forEach(cp => {
-        const r = state.results[cp.id];
-        if (r && counts[r.status] !== undefined) counts[r.status]++;
-    });
-
-    const overall = counts.ontbreekt > 0 ? 'red' : counts.twijfelachtig > 0 ? 'orange' : 'green';
-    const overallMsg = {
-        green:  '✅ Alle aansluitpunten zijn correct — klaar voor inplannen!',
-        orange: '⚠️ Sommige punten zijn onduidelijk — bel de klant vóór je rijdt.',
-        red:    '❌ Er ontbreken aansluitpunten — nog niet inplannen voor montage.'
-    }[overall];
-    const alertType = { green: 'success', orange: 'warning', red: 'error' }[overall];
-
-    const icons = { aanwezig: '✅', twijfelachtig: '⚠️', ontbreekt: '❌' };
-
-    return `
-    <div class="card">
-        <div class="card-title">Controlerapport</div>
-
-        <div class="alert alert-${alertType}">${overallMsg}</div>
-
-        <div class="report-summary">
-            <div class="summary-card green">
-                <div class="summary-number">${counts.aanwezig}</div>
-                <div class="summary-label">Aanwezig</div>
-            </div>
-            <div class="summary-card orange">
-                <div class="summary-number">${counts.twijfelachtig}</div>
-                <div class="summary-label">Twijfelachtig</div>
-            </div>
-            <div class="summary-card red">
-                <div class="summary-number">${counts.ontbreekt}</div>
-                <div class="summary-label">Ontbreekt</div>
-            </div>
-        </div>
-
-        <hr class="divider">
-
-        ${state.checkpoints.map(cp => {
-            const r = state.results[cp.id] || { status: 'twijfelachtig', explanation: 'Geen resultaat ontvangen.' };
-            const photo = state.photos[cp.id];
-            return `
-            <div class="result-item status-${r.status}">
-                <div class="result-icon">${icons[r.status] || '❓'}</div>
-                <div class="result-body">
-                    <div class="result-name">${cp.description}</div>
-                    <div class="result-expl">${r.explanation}</div>
-                </div>
-                ${photo ? `<img src="${photo.previewUrl}" class="result-photo" alt="Foto" onclick="window.open(this.src)">` : ''}
-            </div>`;
-        }).join('')}
-
-        <div class="btn-row">
-            <button class="btn btn-secondary" id="newCheckBtn">Nieuwe check</button>
-            <button class="btn btn-primary" onclick="window.print()">🖨 Afdrukken</button>
-        </div>
-    </div>`;
-}
-
-// ============================================================
-//  HANDLERS
-// ============================================================
-function attachHandlers() {
-
-    /* Setup */
-    const apiInput = document.getElementById('apiKeyInput');
-    const setupBtn = document.getElementById('setupNextBtn');
-    if (apiInput) {
-        apiInput.addEventListener('input', () => {
-            state.apiKey = apiInput.value.trim();
-            if (setupBtn) setupBtn.disabled = !state.apiKey;
-        });
-    }
-    if (setupBtn) setupBtn.addEventListener('click', () => {
-        localStorage.setItem('kc_key', state.apiKey);
-        state.step = 'upload';
-        render();
-    });
-
-    /* Upload */
-    const zone = document.getElementById('uploadZone');
-    if (zone) {
-        zone.addEventListener('click', () => document.getElementById('drawingInput').click());
-        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-        zone.addEventListener('drop', e => {
-            e.preventDefault(); zone.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) loadDrawing(e.dataTransfer.files[0]);
-        });
-    }
-
-    document.getElementById('drawingInput').onchange = e => {
-        if (e.target.files[0]) loadDrawing(e.target.files[0]);
-        e.target.value = '';
-    };
-
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    if (analyzeBtn) analyzeBtn.addEventListener('click', runAnalysis);
-
-    const backSetup = document.getElementById('backSetupBtn');
-    if (backSetup) backSetup.addEventListener('click', () => { state.step = 'setup'; render(); });
-
-    /* Review */
-    const reupload = document.getElementById('reuploadBtn');
-    if (reupload) reupload.addEventListener('click', () => { state.step = 'upload'; render(); });
-
-    const startCustomer = document.getElementById('startCustomerBtn');
-    if (startCustomer) startCustomer.addEventListener('click', () => {
-        state.customerStep = 0;
-        state.photos = {};
-        state.results = {};
-        state.error = null;
-        state.step = 'customer';
-        render();
-    });
-
-    /* Customer */
-    const photoArea = document.getElementById('photoArea');
-    if (photoArea) photoArea.addEventListener('click', () => document.getElementById('photoInput').click());
-
-    document.getElementById('photoInput').onchange = e => {
-        if (e.target.files[0]) loadPhoto(e.target.files[0]);
-        e.target.value = '';
-    };
-
-    const nextPhoto = document.getElementById('nextPhotoBtn');
-    if (nextPhoto) nextPhoto.addEventListener('click', () => {
-        state.customerStep++;
-        state.error = null;
-        if (state.customerStep >= state.checkpoints.length) {
-            runReporting();
-        } else {
-            render();
-        }
-    });
-
-    const prevPhoto = document.getElementById('prevPhotoBtn');
-    if (prevPhoto) prevPhoto.addEventListener('click', () => {
-        state.customerStep = Math.max(0, state.customerStep - 1);
-        state.error = null;
-        render();
-    });
-
-    /* Report */
-    const newCheck = document.getElementById('newCheckBtn');
-    if (newCheck) newCheck.addEventListener('click', () => {
-        state.step = 'upload';
-        state.drawing = null;
-        state.checkpoints = [];
-        state.photos = {};
-        state.results = {};
-        state.error = null;
-        render();
-    });
-}
-
-// ============================================================
-//  FILE LOADERS
-// ============================================================
-function loadDrawing(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        const [header, base64] = e.target.result.split(',');
-        const mimeType = header.match(/:(.*?);/)[1];
-        state.drawing = { base64, mimeType, filename: file.name };
-        state.error = null;
-        render();
-    };
-    reader.readAsDataURL(file);
-}
-
-function loadPhoto(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        const dataUrl = e.target.result;
-        const [header, base64] = dataUrl.split(',');
-        const mimeType = header.match(/:(.*?);/)[1];
-        const cp = state.checkpoints[state.customerStep];
-        state.photos[cp.id] = { base64, mimeType, previewUrl: dataUrl };
-        state.error = null;
-        render();
-    };
-    reader.readAsDataURL(file);
-}
-
-// ============================================================
-//  CLAUDE API
-// ============================================================
-async function claude(messages, maxTokens = 1600) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'x-api-key': state.apiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-            'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: maxTokens,
-            messages
-        })
-    });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `API fout ${res.status}`);
-    }
-    return (await res.json()).content[0].text;
-}
-
-function parseJSON(text) {
-    return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, ''));
-}
-
-// ============================================================
-//  ANALYSIS
-// ============================================================
-async function runAnalysis() {
-    state.step = 'analyzing';
-    state.error = null;
-    render();
-
-    try {
-        const text = await claude([{
-            role: 'user',
-            content: [
-                {
-                    type: 'image',
-                    source: { type: 'base64', media_type: state.drawing.mimeType, data: state.drawing.base64 }
-                },
-                {
-                    type: 'text',
-                    text: `Je bent expert in technische keukentekeningen. Analyseer deze tekening en geef een JSON array terug van ALLE aansluitpunten die vóór de montage gecontroleerd moeten worden (elektra, water, afvoer, gas).
-
-Geef ALLEEN de JSON terug, geen uitleg:
-[
-  {
-    "id": 1,
-    "type": "elektra",
-    "description": "Perilex aansluiting 7400W — inductiekookplaat",
-    "location": "Onderin de muur, midden-rechts van de keuken",
-    "photo_instruction": "Fotografeer de muur onderin rechts van het midden, op de plek van de kookplaat",
-    "critical": true
+// ── AANBIEDEN ─────────────────────────────────────────────
+async function pageAanbieden(el) {
+  if (!user) {
+    el.innerHTML = `<div class="page-narrow"><div class="card" style="text-align:center;padding:48px">
+      <div style="font-size:48px;margin-bottom:16px">🔑</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">Log eerst in</div>
+      <div style="font-size:14px;color:var(--gray-4);margin-bottom:24px">Je hebt een account nodig om een keuken aan te bieden.</div>
+      <button class="btn btn-primary" style="margin:0 auto" onclick="go('login')">Inloggen / Registreren</button>
+    </div></div>`;
+    return;
   }
-]
 
-Regels:
-- type: elektra | water | afvoer | gas
-- critical: true voor >2000W, Perilex, hoofd watertoevoer, gas
-- photo_instruction: simpele Nederlandse zin voor een klant zonder technische kennis — beschrijf WAAr ze op moeten richten
-- Geef elk uniek aansluitpunt als apart item`
-                }
-            ]
-        }], 2000);
+  pendingPhotos = [];
 
-        state.checkpoints = parseJSON(text);
-        state.step = 'review';
-    } catch (err) {
-        state.step = 'upload';
-        state.error = `Analyse mislukt: ${err.message}`;
+  el.innerHTML = `<div class="page-narrow"><div class="card">
+    <div class="card-title">Keuken aanbieden</div>
+    <div class="card-sub">Hoe meer info, hoe sneller je een koper vindt.</div>
+    <div id="fa"></div>
+
+    <div class="fg"><label class="fl">Titel *</label>
+      <input id="f_t" class="fi" placeholder="Bijv. Witte IKEA Metod keuken, 3 meter" maxlength="100"></div>
+
+    <div class="row2">
+      <div class="fg"><label class="fl">Merk</label><input id="f_b" class="fi" placeholder="IKEA, Siematic…"></div>
+      <div class="fg"><label class="fl">Kleur</label><input id="f_c" class="fi" placeholder="Wit, antraciet…"></div>
+    </div>
+
+    <div class="fg"><label class="fl">Afmetingen (cm)</label>
+      <div class="row3">
+        <input id="f_w" class="fi" type="number" placeholder="Breedte">
+        <input id="f_d" class="fi" type="number" placeholder="Diepte">
+        <input id="f_h" class="fi" type="number" placeholder="Hoogte">
+      </div>
+    </div>
+
+    <div class="fg"><label class="fl">Omschrijving</label>
+      <textarea id="f_desc" class="ft" placeholder="Staat van de keuken, wat zit erbij, bijzonderheden…"></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="fg"><label class="fl">Vraagprijs (€) *</label><input id="f_p" class="fi" type="number" placeholder="500"></div>
+      <div class="fg"><label class="fl">Stad *</label><input id="f_city" class="fi" placeholder="Amsterdam"></div>
+    </div>
+
+    <div class="fg"><label class="fl">Foto's (max 6)</label>
+      <div class="photo-grid" id="pg">${photoGridHTML()}</div>
+    </div>
+
+    <button class="submit-btn" id="sb" onclick="submitListing()">Advertentie plaatsen</button>
+  </div></div>`;
+
+  document.getElementById('fileIn').onchange = onPhotoSelect;
+
+  el.addEventListener('click', e => {
+    const slot = e.target.closest('.photo-slot');
+    if (slot && !e.target.closest('.rm-btn') && !slot.classList.contains('filled')) {
+      document.getElementById('fileIn').click();
     }
-    render();
+  });
 }
 
-// ============================================================
-//  PHOTO REPORTING
-// ============================================================
-async function runReporting() {
-    state.step = 'reporting';
-    render();
-
-    for (const cp of state.checkpoints) {
-        const photo = state.photos[cp.id];
-        if (!photo) {
-            state.results[cp.id] = { status: 'twijfelachtig', explanation: 'Geen foto gemaakt voor dit punt.' };
-            render();
-            continue;
-        }
-
-        try {
-            const text = await claude([{
-                role: 'user',
-                content: [
-                    {
-                        type: 'image',
-                        source: { type: 'base64', media_type: photo.mimeType, data: photo.base64 }
-                    },
-                    {
-                        type: 'text',
-                        text: `Beoordeel of het volgende aansluitpunt zichtbaar en correct aanwezig is op de foto.
-
-Verwacht: ${cp.description}
-Type: ${cp.type}
-Verwachte locatie: ${cp.location}
-
-Geef ALLEEN JSON terug:
-{
-  "status": "aanwezig" | "twijfelachtig" | "ontbreekt",
-  "explanation": "Één zin uitleg in het Nederlands"
+function photoGridHTML() {
+  return Array.from({ length: 6 }, (_, i) => {
+    if (i < pendingPhotos.length) return `
+      <div class="photo-slot filled">
+        <img src="${pendingPhotos[i].url}" alt="">
+        <button class="rm-btn" onclick="rmPhoto(${i})">×</button>
+      </div>`;
+    if (i === pendingPhotos.length) return `
+      <div class="photo-slot">
+        <div class="slot-icon">📷</div>
+        <div class="slot-text">Toevoegen</div>
+      </div>`;
+    return `<div class="photo-slot" style="opacity:.3;cursor:default"></div>`;
+  }).join('');
 }
 
-- aanwezig: duidelijk zichtbaar en op de juiste plek
-- twijfelachtig: mogelijk aanwezig maar onduidelijk, te ver weg, of locatie onzeker
-- ontbreekt: niet zichtbaar of aantoonbaar afwezig`
-                    }
-                ]
-            }], 300);
+function onPhotoSelect(e) {
+  const left = 6 - pendingPhotos.length;
+  Array.from(e.target.files).slice(0, left).forEach(file => {
+    const r = new FileReader();
+    r.onload = ev => {
+      pendingPhotos.push({ file, url: ev.target.result });
+      document.getElementById('pg').innerHTML = photoGridHTML();
+    };
+    r.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
 
-            state.results[cp.id] = parseJSON(text);
-        } catch (err) {
-            state.results[cp.id] = { status: 'twijfelachtig', explanation: `Kon foto niet analyseren: ${err.message}` };
-        }
-        render();
+window.rmPhoto = i => {
+  pendingPhotos.splice(i, 1);
+  document.getElementById('pg').innerHTML = photoGridHTML();
+};
+
+window.submitListing = async () => {
+  const title = v('f_t'), price = parseInt(v('f_p')), city = v('f_city');
+  const fa = document.getElementById('fa');
+  if (!title || !price || !city) { fa.innerHTML = err('Vul minimaal een titel, prijs en stad in.'); return; }
+
+  const sb = document.getElementById('sb');
+  sb.disabled = true;
+  sb.innerHTML = `<div class="spin" style="width:18px;height:18px;border-width:2px"></div> Bezig…`;
+  fa.innerHTML = '';
+
+  try {
+    const { data: listing, error: le } = await db.from('listings').insert({
+      user_id: user.id, title, price, city,
+      brand: v('f_b') || null, color: v('f_c') || null,
+      width_cm: parseInt(v('f_w')) || null,
+      depth_cm: parseInt(v('f_d')) || null,
+      height_cm: parseInt(v('f_h')) || null,
+      description: v('f_desc') || null,
+    }).select().single();
+    if (le) throw le;
+
+    for (let i = 0; i < pendingPhotos.length; i++) {
+      const { file } = pendingPhotos[i];
+      const ext = file.name.split('.').pop();
+      const path = `${listing.id}/${i}-${Date.now()}.${ext}`;
+      const { error: ue } = await db.storage.from('photos').upload(path, file, { cacheControl: '3600' });
+      if (ue) throw ue;
+      const { data: { publicUrl } } = db.storage.from('photos').getPublicUrl(path);
+      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: i });
     }
 
-    state.step = 'report';
-    render();
+    go(`k/${listing.id}`);
+  } catch (e) {
+    fa.innerHTML = err(e.message);
+    sb.disabled = false;
+    sb.innerHTML = 'Advertentie plaatsen';
+  }
+};
+
+// ── LOGIN / REGISTER ──────────────────────────────────────
+async function pageLogin(el) {
+  if (user) { go(''); return; }
+  let tab = 'login';
+
+  const draw = () => {
+    el.innerHTML = `<div class="page-narrow"><div class="card">
+      <div class="tabs">
+        <div class="tab${tab==='login'?' active':''}" onclick="setTab('login')">Inloggen</div>
+        <div class="tab${tab==='register'?' active':''}" onclick="setTab('register')">Registreren</div>
+      </div>
+      <div id="aa"></div>
+      ${tab==='register' ? `<div class="fg"><label class="fl">Naam</label><input id="a_n" class="fi" placeholder="Jouw naam"></div>` : ''}
+      <div class="fg"><label class="fl">E-mailadres</label><input id="a_e" class="fi" type="email" placeholder="jij@email.nl"></div>
+      <div class="fg"><label class="fl">Wachtwoord</label><input id="a_p" class="fi" type="password" placeholder="${tab==='register'?'Minimaal 8 tekens':''}"></div>
+      ${tab==='register' ? `<div class="fg"><label class="fl">Ik ben een…</label>
+        <div class="role-grid">
+          <div class="role-opt sel" data-r="koper" onclick="selRole(this)"><div class="ri">🛍️</div><div class="rl">Koper</div></div>
+          <div class="role-opt" data-r="aanbieder" onclick="selRole(this)"><div class="ri">🏠</div><div class="rl">Aanbieder</div></div>
+          <div class="role-opt" data-r="monteur" onclick="selRole(this)"><div class="ri">🔧</div><div class="rl">Monteur</div></div>
+        </div>
+      </div>` : ''}
+      <button class="submit-btn" id="ab" onclick="doAuth('${tab}')">
+        ${tab==='login' ? 'Inloggen' : 'Account aanmaken'}
+      </button>
+    </div></div>`;
+  };
+
+  window.setTab = t => { tab = t; draw(); };
+  window.selRole = el => {
+    document.querySelectorAll('.role-opt').forEach(r => r.classList.remove('sel'));
+    el.classList.add('sel');
+  };
+  window.doAuth = async mode => {
+    const email = v('a_e'), pw = v('a_p'), aa = document.getElementById('aa');
+    if (!email || !pw) { aa.innerHTML = err('Vul alle velden in.'); return; }
+    const ab = document.getElementById('ab');
+    ab.disabled = true; aa.innerHTML = '';
+    try {
+      if (mode === 'login') {
+        const { error: e } = await db.auth.signInWithPassword({ email, password: pw });
+        if (e) throw e;
+        go('');
+      } else {
+        const name = v('a_n') || '';
+        const role = document.querySelector('.role-opt.sel')?.dataset?.r || 'koper';
+        const { data, error: e } = await db.auth.signUp({ email, password: pw, options: { data: { name } } });
+        if (e) throw e;
+        await db.from('profiles').upsert({ id: data.user.id, name, role });
+        aa.innerHTML = `<div class="alert alert-ok">✅ Account aangemaakt! Je kunt nu inloggen.</div>`;
+        tab = 'login'; draw();
+      }
+    } catch (e) { aa.innerHTML = err(e.message); ab.disabled = false; }
+  };
+
+  draw();
 }
 
-// ============================================================
-//  START
-// ============================================================
-render();
+// ── MIJN ACCOUNT ──────────────────────────────────────────
+async function pageMijn(el) {
+  if (!user) { go('login'); return; }
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  el.innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div>
+        <h1 style="font-size:22px;font-weight:800">Mijn account</h1>
+        <div style="font-size:14px;color:var(--gray-4);margin-top:2px">${esc(user.email)}</div>
+      </div>
+      <button class="btn btn-ghost" onclick="uitloggen()">Uitloggen</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="font-size:17px;font-weight:700">Mijn advertenties</h2>
+      <button class="btn btn-primary" onclick="go('aanbieden')">+ Toevoegen</button>
+    </div>
+    ${!data?.length ? `<div class="empty">
+      <div class="empty-icon">📦</div>
+      <div class="empty-title">Nog geen advertenties</div>
+      <div class="empty-text">Bied je eerste keuken aan en bereik kopers door heel Nederland.</div>
+    </div>` : data.map(l => {
+      const img = sort(l.listing_photos)[0]?.url;
+      return `<div class="my-item">
+        <div class="my-thumb">${img ? `<img src="${img}" alt="">` : '🍳'}</div>
+        <div class="my-body">
+          <div class="my-title">${esc(l.title)}</div>
+          <div class="my-meta">€${l.price.toLocaleString('nl')} · ${esc(l.city || '')} · ${fmtDate(l.created_at)}</div>
+          <div class="my-actions">
+            <span class="status-badge s-${l.status}">${l.status}</span>
+            <button class="btn btn-ghost btn-sm" onclick="go('k/${l.id}')">Bekijken</button>
+            <button class="btn btn-danger btn-sm" onclick="delListing('${l.id}')">Verwijderen</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+window.uitloggen = async () => {
+  await db.auth.signOut();
+  user = null; profile = null;
+  go('');
+};
+window.delListing = async id => {
+  if (!confirm('Weet je zeker dat je deze advertentie wilt verwijderen?')) return;
+  await db.from('listings').delete().eq('id', id);
+  go('mijn');
+};
+
+// ── HELPERS ───────────────────────────────────────────────
+const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+const v   = id => document.getElementById(id)?.value?.trim() || '';
+const err = msg => `<div class="alert alert-err">⚠️ ${msg}</div>`;
+const sort = arr => (arr || []).slice().sort((a,b) => a.order_index - b.order_index);
+const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) : '';
+
+router();
 </script>
 </body>
 </html>
