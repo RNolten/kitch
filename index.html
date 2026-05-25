@@ -434,7 +434,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const { createClient } = supabase;
 const db = createClient(SB_URL, SB_KEY);
 
-let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [], pendingApparatuur = [], kastData = {};
+let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [], pendingApparatuur = [];
 
 // ── ROUTER ────────────────────────────────────────────────
 async function router() {
@@ -685,7 +685,7 @@ async function pageDetail(el, id) {
           <h3>Afmetingen</h3>
           ${afmJson ? `
           <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:8px;margin:10px 0;overflow:hidden">
-            ${keukenSVG(afmJson.type || 'Rechte keuken', afmJson, afmJson.kastData || {})}
+            ${keukenSVG(afmJson.type || 'Rechte keuken', afmJson)}
           </div>` : ''}
           ${maatRegels.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
             ${maatRegels.map(m => `<div style="background:var(--gray-1);border-radius:var(--r-sm);padding:8px 10px">
@@ -1103,7 +1103,6 @@ window.submitListing = async () => {
   const afmData = { type: afmType };
   afmCfg.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
   afmData.hoogte = parseInt(v('f_h')) || null;
-  if (Object.keys(kastData).length) afmData.kastData = kastData;
   const mainBr = afmData.f_w || afmData.f_wand1 || afmData.f_wa || null;
   const mainD  = afmData.f_d || null;
 
@@ -1629,26 +1628,6 @@ function _getDims() {
   return d;
 }
 
-// Kasttypen met kleur en icoon
-const KAST = [
-  { id:'basis',    lbl:'Basis',       col:'#EEF0E8', brd:'#888', icon:'' },
-  { id:'hoog',     lbl:'Kolomkast',   col:'#D4D8CC', brd:'#666', icon:'║' },
-  { id:'kook',     lbl:'Kookunit',    col:'#FFF0DC', brd:'#D07030', icon:'🔥' },
-  { id:'spoelbak', lbl:'Spoelbak',    col:'#DCF0FF', brd:'#3080C0', icon:'~' },
-  { id:'vaatwas',  lbl:'Vaatwasser',  col:'#EAEAF8', brd:'#6060B0', icon:'≡' },
-  { id:'leeg',     lbl:'Open ruimte', col:'#F8F8F8', brd:'#CCC',    icon:'' },
-];
-
-// Wandconfiguratie per keukentype
-const WALL_CFG = {
-  'Rechte keuken': [{id:'wand1', lbl:'Wand',          dim:'f_w'}],
-  'Hoek':          [{id:'wand1', lbl:'Wand 1 (lang)', dim:'f_wand1'}, {id:'wand2', lbl:'Wand 2 (kort)', dim:'f_wand2'}],
-  'U-vorm':        [{id:'wa',    lbl:'Wand achter',    dim:'f_wa'},   {id:'wl', lbl:'Wand links', dim:'f_wl'}, {id:'wr', lbl:'Wand rechts', dim:'f_wr'}],
-  'Eiland':        [{id:'wand1', lbl:'Aanrecht',       dim:'f_w'},    {id:'eiland', lbl:'Eiland', dim:'f_eibr'}],
-  'Galley':        [{id:'wand1', lbl:'Rij 1',          dim:'f_w'},    {id:'wand2', lbl:'Rij 2', dim:'f_w'}],
-  'Overig':        [{id:'wand1', lbl:'Wand',           dim:'f_w'}],
-};
-
 // Invoervelden per type
 const DIAG_FIELDS = {
   'Rechte keuken': [{id:'f_w', lbl:'Breedte', ph:'300', hint:'totale lengte'}, {id:'f_d', lbl:'Diepte kasten', ph:'60', hint:'normaal 58–62 cm'}],
@@ -1659,59 +1638,12 @@ const DIAG_FIELDS = {
   'Overig':        [{id:'f_w', lbl:'Breedte', ph:'300'}, {id:'f_d', lbl:'Diepte', ph:'60'}],
 };
 
-// Plattegrond-iconen per kasttype (plan view)
-function _kastPlanIcon(typeId, rx, ry, rw, rh) {
-  const cx = rx+rw/2, cy = ry+rh/2;
-  const p = Math.min(rw,rh)*0.16;
-  if (typeId==='spoelbak') {
-    const bp = Math.min(rw,rh)*0.13;
-    const sw = Math.max(0.6, Math.min(rw,rh)*0.045);
-    return `<rect x="${rx+bp}" y="${ry+bp}" width="${rw-bp*2}" height="${rh-bp*2}" fill="none" stroke="#3080C0" stroke-width="${sw}" rx="1.5"/>`
-      +`<circle cx="${cx}" cy="${cy}" r="${Math.max(1.2, Math.min(rw,rh)*0.1)}" fill="none" stroke="#3080C0" stroke-width="${sw*0.8}"/>`;
-  }
-  if (typeId==='kook') {
-    const r = Math.max(2, Math.min(rw,rh)*0.14);
-    if (rw<20||rh<20) return `<circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="none" stroke="#D07030" stroke-width="0.9"/>`;
-    const ox=rw*0.24, oy=rh*0.24;
-    return [[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx,dy])=>
-      `<circle cx="${cx+dx*ox}" cy="${cy+dy*oy}" r="${r}" fill="none" stroke="#D07030" stroke-width="0.9"/>`
-    ).join('');
-  }
-  if (typeId==='vaatwas') {
-    return `<line x1="${rx+p}" y1="${ry+rh-p}" x2="${rx+rw-p}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`
-      +`<line x1="${rx+p}" y1="${ry+rh*0.55}" x2="${rx+rw*0.55}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`;
-  }
-  if (typeId==='hoog') {
-    return (rh>rw)
-      ? `<line x1="${cx}" y1="${ry+p}" x2="${cx}" y2="${ry+rh-p}" stroke="#777" stroke-width="0.9"/>`
-      : `<line x1="${rx+p}" y1="${cy}" x2="${rx+rw-p}" y2="${cy}" stroke="#777" stroke-width="0.9"/>`;
-  }
-  return '';
-}
-
 // Wandlijn (muur) en aanrechtlijn helpers
 function _wl(x1,y1,x2,y2){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#444" stroke-width="3" stroke-linecap="square"/>`;}
 function _ct(x1,y1,x2,y2){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#C8A070" stroke-width="3" stroke-linecap="square"/>`;}
 
-// Apparatuur-iconen gepositioneerd langs een wand (op basis van kastData)
-function _apIcons(wall, x0, y0, lenPx, depPx, vertical, wallCm) {
-  const segs = (kastData||{})[wall];
-  if (!segs || !segs.length) return '';
-  const pxPerCm = wallCm ? lenPx / wallCm : lenPx / (segs.reduce((s,k)=>s+(k.breedte||60),0)||1);
-  let off = 0;
-  return segs.map(k => {
-    const sp = (k.breedte||60) * pxPerCm;
-    const rx = vertical ? x0 : x0+off, ry = vertical ? y0+off : y0;
-    const rw = vertical ? depPx : sp, rh = vertical ? sp : depPx;
-    off += sp;
-    if (!k.type || k.type === 'basis' || k.type === 'leeg') return '';
-    return _kastPlanIcon(k.type, rx, ry, rw, rh);
-  }).join('');
-}
-
-// Plattegrond SVG per keukentype (van bovenaf)
-// Aanrechtzone = gevuld vlak; aanrechtblad = lijn aan de voorkant; iconen voor apparatuur
-function keukenSVG(type, dims, kData) {
+// Plattegrond SVG per keukentype (van bovenaf) — vorm + buitenmaten
+function keukenSVG(type, dims) {
   const n = id => parseInt(dims[id]) || 0;
   const M = 44, MW = 226, MH = 164, ov = 2;
   const ZF = '#EEF0E8'; // zone fill
@@ -1723,7 +1655,6 @@ function keukenSVG(type, dims, kData) {
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wl(M,M,M+w,M)}
         <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand1',M,M,w,d,false,W)}
         ${_ct(M,M+d+ov,M+w,M+d+ov)}
         ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
         ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
@@ -1737,8 +1668,6 @@ function keukenSVG(type, dims, kData) {
         ${_wl(M,M,M,M+w2)}
         ${_wl(M,M+w2,M+w1,M+w2)}
         <polygon points="${M},${M} ${M+d},${M} ${M+d},${M+w2-d} ${M+w1},${M+w2-d} ${M+w1},${M+w2} ${M},${M+w2}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand2',M,M,w2-d,d,true,W2)}
-        ${_apIcons('wand1',M,M+w2-d,w1,d,false,W1)}
         ${_ct(M+d+ov,M,M+d+ov,M+w2-d)}
         ${_ct(M,M+w2-d-ov,M+w1,M+w2-d-ov)}
         ${_eh(M,M+w2,VH-10)} ${_eh(M+w1,M+w2,VH-10)} ${_hd(M,M+w1,VH-12,n('f_wand1'))}
@@ -1754,9 +1683,6 @@ function keukenSVG(type, dims, kData) {
         ${_wl(M,M,M,M+wl)}
         ${_wl(M+wa,M,M+wa,M+wr)}
         <polygon points="${M},${M} ${M+wa},${M} ${M+wa},${M+wr} ${M+wa-d},${M+wr} ${M+wa-d},${M+d} ${M+d},${M+d} ${M+d},${M+wl} ${M},${M+wl}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wa',M,M,wa,d,false,WA)}
-        ${_apIcons('wl',M,M+d,wl-d,d,true,WL)}
-        ${_apIcons('wr',M+wa-d,M+d,wr-d,d,true,WR)}
         ${_ct(M,M+d+ov,M+wa,M+d+ov)}
         ${_ct(M+d+ov,M+d,M+d+ov,M+wl)}
         ${_ct(M+wa-d-ov,M+d,M+wa-d-ov,M+wr)}
@@ -1772,10 +1698,8 @@ function keukenSVG(type, dims, kData) {
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wl(M,M,M+w,M)}
         <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand1',M,M,w,d,false,W)}
         ${_ct(M,M+d+ov,M+w,M+d+ov)}
         <rect x="${ex}" y="${M+d+gang}" width="${ebr}" height="${ed}" fill="${ZF}" stroke="#AAA" stroke-width="0.5" stroke-dasharray="4,2" rx="1"/>
-        ${_apIcons('eiland',ex,M+d+gang,ebr,ed,false,EBR)}
         ${_ct(ex,M+d+gang-ov,ex+ebr,M+d+gang-ov)}
         ${_ct(ex,M+d+gang+ed+ov,ex+ebr,M+d+gang+ed+ov)}
         ${_eh(M,M+totH*s,VH-10)} ${_eh(M+w,M+totH*s,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
@@ -1791,11 +1715,9 @@ function keukenSVG(type, dims, kData) {
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wl(M,M,M+w,M)}
         <rect x="${M}" y="${M}" width="${w}" height="${d1}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand1',M,M,w,d1,false,W)}
         ${_ct(M,M+d1+ov,M+w,M+d1+ov)}
         ${_wl(M,M+d1+gang+d2,M+w,M+d1+gang+d2)}
         <rect x="${M}" y="${M+d1+gang}" width="${w}" height="${d2}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand2',M,M+d1+gang,w,d2,false,W)}
         ${_ct(M,M+d1+gang-ov,M+w,M+d1+gang-ov)}
         ${_eh(M,M,VH-10)} ${_eh(M+w,M,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
         ${_ev(M+d1,M+w+10,M+w+36)} ${_ev(M+d1+gang,M+w+10,M+w+36)} ${_vd(M+d1,M+d1+gang,M+w+24,n('f_gang'))}
@@ -1807,7 +1729,6 @@ function keukenSVG(type, dims, kData) {
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wl(M,M,M+w,M)}
         <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="${ZF}" stroke="none"/>
-        ${_apIcons('wand1',M,M,w,d,false,W)}
         ${_ct(M,M+d+ov,M+w,M+d+ov)}
         ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
         ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
@@ -1824,7 +1745,7 @@ function renderAfmetingen(type) {
 
   wrap.innerHTML = `
     <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:8px 8px 4px;margin-bottom:14px;overflow:hidden">
-      <div id="afm-svg">${keukenSVG(type, d, kastData)}</div>
+      <div id="afm-svg">${keukenSVG(type, d)}</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(${fields.length > 3 ? 3 : Math.min(fields.length,2)},1fr);gap:10px 14px;margin-bottom:18px">
       ${fields.map(f => `
@@ -1833,114 +1754,17 @@ function renderAfmetingen(type) {
           <input id="${f.id}" class="fi" type="number" placeholder="${f.ph}" min="0" oninput="updateDiagram('${type}')">
           ${f.hint ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px">${f.hint}</div>` : ''}
         </div>`).join('')}
-    </div>
-    <div id="kast-editor"></div>`;
+    </div>`;
 
   // Bestaande waarden herstellen
   fields.forEach(f => { const el = document.getElementById(f.id); if (el && d[f.id]) el.value = d[f.id]; });
   const svgEl = document.getElementById('afm-svg');
-  if (svgEl) svgEl.innerHTML = keukenSVG(type, _getDims(), kastData);
-  renderKastEditor(type);
+  if (svgEl) svgEl.innerHTML = keukenSVG(type, _getDims());
 }
-
-function renderKastEditor(type) {
-  const el = document.getElementById('kast-editor');
-  if (!el) return;
-  const walls = WALL_CFG[type] || WALL_CFG['Rechte keuken'];
-  const d = _getDims();
-
-  el.innerHTML = `<div style="border-top:1px solid var(--gray-2);padding-top:16px">
-    <div class="form-card-title" style="margin-bottom:4px">Kastindeling</div>
-    <div style="font-size:11px;color:var(--gray-4);margin-bottom:14px">Klik op een kleurblokje om het type te wijzigen · breedtes zijn in cm</div>
-    ${walls.map(w => {
-      const totalCm = parseInt(d[w.dim]) || 0;
-      const segs = kastData[w.id] || [];
-      const usedCm = segs.reduce((s,k) => s+(k.breedte||60), 0);
-      const overFlow = totalCm && usedCm > totalCm;
-      return `<div style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div>
-            <span style="font-size:12px;font-weight:700;color:var(--gray-5)">${w.lbl}</span>
-            ${totalCm ? `<span style="font-size:11px;color:${overFlow?'var(--red)':'var(--gray-4)'};margin-left:8px">${usedCm} / ${totalCm} cm${overFlow?' ⚠️ te breed':''}</span>` : ''}
-          </div>
-          <button onclick="adjKasten('${w.id}','${type}',1)" class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:12px">+ Kast</button>
-        </div>
-        ${segs.length ? `
-          <div style="display:flex;gap:3px;margin-bottom:6px;overflow-x:auto;padding-bottom:2px">
-            ${segs.map((k, i) => {
-              const kt = KAST.find(t => t.id === k.type) || KAST[0];
-              const wpx = totalCm ? Math.max(28, (k.breedte / totalCm) * 220) : Math.max(28, (k.breedte / (usedCm||1)) * 220);
-              return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-                <button onclick="cycleKast('${w.id}',${i},'${type}')"
-                  style="width:${wpx}px;height:28px;background:${kt.col};border:1.5px solid ${kt.brd};border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;color:${kt.brd};padding:0"
-                  title="${kt.lbl} — klik om type te wijzigen">${kt.lbl.substring(0,3)}</button>
-                <input type="number" value="${k.breedte}" min="10" max="500"
-                  style="width:${Math.max(28,wpx)}px;padding:1px 2px;font-size:10px;text-align:center;border:1px solid var(--gray-2);border-radius:3px;color:var(--gray-5)"
-                  oninput="setKastBr('${w.id}',${i},'${type}',this.value)"
-                  onblur="refreshKastEditor('${type}')">
-                <button onclick="delKast('${w.id}',${i},'${type}')" style="background:none;border:none;cursor:pointer;font-size:9px;color:var(--gray-3);padding:0;line-height:1" title="Verwijder">✕</button>
-              </div>`;
-            }).join('')}
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-            ${KAST.map(k => `<span style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--gray-4)">
-              <span style="width:10px;height:10px;border-radius:2px;background:${k.col};border:1px solid ${k.brd};display:inline-block"></span>${k.lbl}
-            </span>`).join('')}
-          </div>` :
-          `<div style="font-size:12px;color:var(--gray-4);padding:8px;background:var(--gray-1);border-radius:var(--r-sm);text-align:center">
-            Klik <strong>+ Kast</strong> om kasten toe te voegen (standaard 60 cm)
-          </div>`}
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-window.delKast = (wall, idx, type) => {
-  if (kastData[wall]) { kastData[wall].splice(idx, 1); updateDiagram(type); renderKastEditor(type); }
-};
-
-window.adjKasten = (wall, type, delta) => {
-  const walls = WALL_CFG[type] || WALL_CFG['Rechte keuken'];
-  const wc = walls.find(w => w.id === wall);
-  const totalCm = parseInt(_getDims()[wc?.dim]) || 300;
-  if (!kastData[wall]) kastData[wall] = [];
-  const newLen = kastData[wall].length + delta;
-  if (newLen < 0 || newLen > 25) return;
-  if (delta > 0) {
-    kastData[wall].push({ type:'basis', breedte: 60 });
-  } else {
-    kastData[wall].pop();
-  }
-  updateDiagram(type);
-  renderKastEditor(type);
-};
-
-window.cycleKast = (wall, idx, type) => {
-  if (!kastData[wall]?.[idx]) return;
-  const types = KAST.map(k => k.id);
-  const cur = kastData[wall][idx].type;
-  kastData[wall][idx].type = types[(types.indexOf(cur) + 1) % types.length];
-  const t = type || document.querySelector('.chip[data-group="keuken_type"].sel')?.getAttribute('data-val') || 'Rechte keuken';
-  updateDiagram(t);
-  renderKastEditor(t);
-};
 
 window.updateDiagram = type => {
   const el = document.getElementById('afm-svg');
-  if (el) el.innerHTML = keukenSVG(type, _getDims(), kastData);
-};
-
-// Individuele kastbreedte aanpassen (oninput → SVG hertekenenen, onblur → kastEditor vernieuwen)
-window.setKastBr = (wall, idx, type, val) => {
-  const n = Math.max(10, parseInt(val) || 10);
-  if (!kastData[wall]?.[idx]) return;
-  kastData[wall][idx].breedte = n;
-  updateDiagram(type);
-};
-
-window.refreshKastEditor = type => {
-  const t = type || document.querySelector('.chip[data-group="keuken_type"].sel')?.getAttribute('data-val') || 'Rechte keuken';
-  renderKastEditor(t);
+  if (el) el.innerHTML = keukenSVG(type, _getDims());
 };
 
 // ── HELPERS ───────────────────────────────────────────────
