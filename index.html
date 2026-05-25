@@ -371,8 +371,12 @@ async function router() {
       <div class="spin"></div>
       <div style="font-size:14px;color:var(--gray-4)">Betaling verifiëren…</div>
     </div></main>`;
-    if (sessionId && monteurId && user) {
-      await verifyPayment(sessionId, monteurId, user.id);
+    // Haal session_id op uit sessionStorage
+    const pending = JSON.parse(sessionStorage.getItem('kk_pending') || '{}');
+    sessionStorage.removeItem('kk_pending');
+    const resolvedSessionId = pending.session_id || sessionId;
+    if (resolvedSessionId && monteurId && user) {
+      await verifyPayment(resolvedSessionId, monteurId, user.id);
     }
     history.replaceState(null, '', window.location.pathname);
     location.hash = '#monteur/' + monteurId;
@@ -1131,8 +1135,10 @@ window.startCheckout = async (monteurId) => {
         origin: window.location.origin,
       }),
     });
-    const { url, error } = await res.json();
+    const { url, session_id, error } = await res.json();
     if (error) throw new Error(error);
+    // Sla session_id op voor verificatie na terugkeer
+    sessionStorage.setItem('kk_pending', JSON.stringify({ session_id, monteur_id: monteurId }));
     window.location.href = url;
   } catch (e) {
     alert('Er ging iets mis: ' + e.message);
