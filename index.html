@@ -1099,9 +1099,9 @@ window.submitListing = async () => {
 
   // Afmetingen: sla alles op als JSON + zet de hoofdwaarden voor backward compat
   const afmType = chipVal('keuken_type') || 'Rechte keuken';
-  const afmCfg = DIAGRAM[afmType] || DIAGRAM['Rechte keuken'];
+  const afmCfg = DIAG_FIELDS[afmType] || DIAG_FIELDS['Rechte keuken'];
   const afmData = { type: afmType };
-  afmCfg.fields.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
+  afmCfg.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
   afmData.hoogte = parseInt(v('f_h')) || null;
   if (Object.keys(kastData).length) afmData.kastData = kastData;
   const mainBr = afmData.f_w || afmData.f_wand1 || afmData.f_wa || null;
@@ -1661,6 +1661,8 @@ const DIAG_FIELDS = {
 
 // SVG kastelementen — proportionele segmenten per wand
 function _wallSegs(wall, x0, y0, lenPx, depPx, vertical) {
+  lenPx = Math.max(1, lenPx);
+  depPx = Math.max(1, depPx);
   const segs = (kastData||{})[wall];
   if (!segs || !segs.length) {
     return `<rect x="${x0}" y="${y0}" width="${vertical?depPx:lenPx}" height="${vertical?lenPx:depPx}" fill="#EEF0E8" stroke="none"/>`;
@@ -1700,7 +1702,7 @@ function keukenSVG(type, dims, kData) {
     }
     case 'Hoek': {
       const W1=n('f_wand1')||360, W2=n('f_wand2')||240, D=n('f_d')||60;
-      const s=Math.min(MW/W1,MH/W2), w1=W1*s, w2=W2*s, d=D*s;
+      const s=Math.min(MW/W1,MH/W2), w1=W1*s, w2=W2*s, d=Math.min(D*s, w1-1, w2-1);
       const VW=M+w1+50, VH=M+w2+40;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:260px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wand1',M,M+w2-d,w1,d,false)}
@@ -1713,7 +1715,7 @@ function keukenSVG(type, dims, kData) {
     }
     case 'U-vorm': {
       const WA=n('f_wa')||300, WL=n('f_wl')||220, WR=n('f_wr')||220, D=n('f_d')||60;
-      const s=Math.min(MW/WA,MH/Math.max(WL,WR)), wa=WA*s, wl=WL*s, wr=WR*s, d=D*s;
+      const s=Math.min(MW/WA,MH/Math.max(WL,WR)), wa=WA*s, wl=WL*s, wr=WR*s, d=Math.min(D*s, wa/2-1, wl-1, wr-1);
       const VW=M+wa+50, VH=M+Math.max(wl,wr)+34;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wa',M,M,wa,d,false)}
