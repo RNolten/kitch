@@ -617,16 +617,31 @@ async function pageDetail(el, id) {
   const phone = l.profiles?.phone || null;
   const cemail= l.profiles?.contact_email || null;
 
+  // Parse afmetingen JSON voor detail schets
+  let afmJson = null;
+  try { if (l.afmetingen) afmJson = JSON.parse(l.afmetingen); } catch(e) {}
+
+  // Bouw maatoverzicht op basis van afmJson of losse velden
+  const maatRegels = [];
+  if (afmJson) {
+    const cfg = DIAGRAM[afmJson.type];
+    if (cfg) cfg.fields.forEach(f => {
+      if (afmJson[f.id]) maatRegels.push({ l: f.lbl, v: afmJson[f.id] + ' cm' });
+    });
+    if (afmJson.hoogte) maatRegels.push({ l: 'Hoogte', v: afmJson.hoogte + ' cm' });
+  } else {
+    if (l.width_cm)  maatRegels.push({ l: 'Breedte', v: l.width_cm  + ' cm' });
+    if (l.depth_cm)  maatRegels.push({ l: 'Diepte',  v: l.depth_cm  + ' cm' });
+    if (l.height_cm) maatRegels.push({ l: 'Hoogte',  v: l.height_cm + ' cm' });
+  }
+
   const specs = [
-    l.keuken_type   && { l: 'Type',      v: l.keuken_type },
-    l.conditie      && { l: 'Conditie',  v: l.conditie },
-    l.brand         && { l: 'Merk',      v: l.brand },
-    l.color         && { l: 'Kleur',     v: l.color },
+    l.keuken_type    && { l: 'Type',     v: l.keuken_type },
+    l.conditie       && { l: 'Conditie', v: l.conditie },
+    l.brand          && { l: 'Merk',     v: l.brand },
+    l.color          && { l: 'Kleur',    v: l.color },
     l.materiaal_blad && { l: 'Blad',     v: l.materiaal_blad },
-    l.leeftijd_jaar && { l: 'Leeftijd',  v: l.leeftijd_jaar + ' jaar' },
-    l.width_cm      && { l: 'Breedte',   v: l.width_cm + ' cm' },
-    l.depth_cm      && { l: 'Diepte',    v: l.depth_cm + ' cm' },
-    l.height_cm     && { l: 'Hoogte',    v: l.height_cm + ' cm' },
+    l.leeftijd_jaar  && { l: 'Leeftijd', v: l.leeftijd_jaar + ' jaar' },
   ].filter(Boolean);
 
   const praktisch = [
@@ -655,6 +670,19 @@ async function pageDetail(el, id) {
         ${l.description ? `<div class="desc-block">
           <h3>Omschrijving</h3>
           <div class="desc-text">${esc(l.description)}</div>
+        </div>` : ''}
+        ${(afmJson || maatRegels.length) ? `<div class="desc-block">
+          <h3>Afmetingen</h3>
+          ${afmJson && DIAGRAM[afmJson.type] ? `
+          <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:8px;margin:10px 0;overflow:hidden">
+            ${DIAGRAM[afmJson.type].svg(afmJson)}
+          </div>` : ''}
+          ${maatRegels.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+            ${maatRegels.map(m => `<div style="background:var(--gray-1);border-radius:var(--r-sm);padding:8px 10px">
+              <div style="font-size:9px;font-weight:700;color:var(--gray-4);text-transform:uppercase;letter-spacing:0.5px">${esc(m.l)}</div>
+              <div style="font-size:14px;font-weight:700;margin-top:1px">${esc(m.v)}</div>
+            </div>`).join('')}
+          </div>` : ''}
         </div>` : ''}
         ${apparatuurItems.length ? `<div class="desc-block">
           <h3>Apparatuur inbegrepen</h3>
@@ -827,15 +855,13 @@ async function pageAanbieden(el) {
         <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50"></div>
     </div>
 
-    <div class="form-card">
-      <div class="form-card-title">📐 Afmetingen (cm)</div>
-      <div class="row3">
-        <div class="fg"><label class="fl">Breedte</label>
-          <input id="f_w" class="fi" type="number" placeholder="300"></div>
-        <div class="fg"><label class="fl">Diepte</label>
-          <input id="f_d" class="fi" type="number" placeholder="60"></div>
-        <div class="fg"><label class="fl">Hoogte</label>
-          <input id="f_h" class="fi" type="number" placeholder="210"></div>
+    <div class="form-card" id="afm-card">
+      <div class="form-card-title">📐 Afmetingen</div>
+      <div id="afm-wrap"><!-- wordt gevuld door renderAfmetingen() --></div>
+      <div class="fg" style="max-width:210px;margin-top:16px">
+        <label class="fl">Hoogte kasten (cm)</label>
+        <input id="f_h" class="fi" type="number" placeholder="210" min="0">
+        <div style="font-size:11px;color:var(--gray-4);margin-top:4px">normaal 210–220 cm</div>
       </div>
     </div>
 
@@ -926,6 +952,9 @@ async function pageAanbieden(el) {
   document.getElementById('fileIn').onchange = onPhotoSelect;
   document.getElementById('fileInTekening').onchange = onTekeningSel;
 
+  // Teken het standaard diagram direct
+  renderAfmetingen('Rechte keuken');
+
   el.addEventListener('click', e => {
     const slot = e.target.closest('.photo-slot');
     if (slot && !e.target.closest('.rm-btn') && !slot.classList.contains('filled')) {
@@ -939,6 +968,9 @@ window.selChip = el => {
   const was = el.classList.contains('sel');
   document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c => c.classList.remove('sel'));
   if (!was) el.classList.add('sel');
+  if (group === 'keuken_type' && document.getElementById('afm-wrap')) {
+    renderAfmetingen(was ? 'Rechte keuken' : el.getAttribute('data-val'));
+  }
 };
 
 window.toggleBtn = id => {
@@ -1055,6 +1087,15 @@ window.submitListing = async () => {
     document.querySelector(`.chip[data-group="${group}"].sel`)?.getAttribute('data-val') || null;
   const isOn = id => document.getElementById(id)?.classList.contains('on') || false;
 
+  // Afmetingen: sla alles op als JSON + zet de hoofdwaarden voor backward compat
+  const afmType = chipVal('keuken_type') || 'Rechte keuken';
+  const afmCfg = DIAGRAM[afmType] || DIAGRAM['Rechte keuken'];
+  const afmData = { type: afmType };
+  afmCfg.fields.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
+  afmData.hoogte = parseInt(v('f_h')) || null;
+  const mainBr = afmData.f_w || afmData.f_wand1 || afmData.f_wa || null;
+  const mainD  = afmData.f_d || null;
+
   const checkedApp = pendingApparatuur;
 
   const sb = document.getElementById('sb');
@@ -1073,9 +1114,10 @@ window.submitListing = async () => {
       user_id: user.id, title, price, city,
       brand: v('f_b') || null,
       color: v('f_c') || null,
-      width_cm: parseInt(v('f_w')) || null,
-      depth_cm: parseInt(v('f_d')) || null,
-      height_cm: parseInt(v('f_h')) || null,
+      width_cm: mainBr,
+      depth_cm: mainD,
+      height_cm: afmData.hoogte,
+      afmetingen: JSON.stringify(afmData),
       description: v('f_desc') || null,
       keuken_type: chipVal('keuken_type'),
       conditie: chipVal('conditie'),
@@ -1533,6 +1575,200 @@ async function verifyPayment(sessionId, monteurId, buyerId) {
     console.error('Betaling verifiëren mislukt:', e);
   }
 }
+
+// ── KEUKEN MAATDIAGRAM ────────────────────────────────────
+
+function _svgDefs() {
+  return `<defs>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,1 L6,3.5 L0,6 Z" fill="#888"/>
+    </marker>
+    <marker id="arrl" markerWidth="7" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse">
+      <path d="M0,1 L6,3.5 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>`;
+}
+
+// Horizontale maatpijl
+function _hd(x1, x2, y, val) {
+  const mx = (x1 + x2) / 2, lbl = val ? val + ' cm' : '?';
+  return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#999" stroke-width="1" marker-start="url(#arrl)" marker-end="url(#arr)"/>
+    <rect x="${mx - 19}" y="${y + 2}" width="38" height="13" fill="white"/>
+    <text x="${mx}" y="${y + 12}" text-anchor="middle" font-size="10" fill="#444" font-family="-apple-system,sans-serif" font-weight="600">${lbl}</text>`;
+}
+
+// Verticale maatpijl
+function _vd(y1, y2, x, val) {
+  const my = (y1 + y2) / 2, lbl = val ? val + ' cm' : '?';
+  return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#999" stroke-width="1" marker-start="url(#arrl)" marker-end="url(#arr)"/>
+    <rect x="${x + 3}" y="${my - 7}" width="38" height="13" fill="white"/>
+    <text x="${x + 7}" y="${my + 4}" font-size="10" fill="#444" font-family="-apple-system,sans-serif" font-weight="600">${lbl}</text>`;
+}
+
+// Hulplijnen
+function _eh(x, ya, yb) { return `<line x1="${x}" y1="${ya}" x2="${x}" y2="${yb}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>`; }
+function _ev(y, xa, xb) { return `<line x1="${xa}" y1="${y}" x2="${xb}" y2="${y}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>`; }
+
+const _cab = `fill="#EEF0E8" stroke="#444" stroke-width="2"`;
+
+function _getDims() {
+  const ids = ['f_w','f_d','f_h','f_wand1','f_wand2','f_wl','f_wr','f_wa','f_eibr','f_eid','f_gang'];
+  const d = {};
+  ids.forEach(id => { const el = document.getElementById(id); d[id] = el ? el.value.trim() : ''; });
+  return d;
+}
+
+const DIAGRAM = {
+  'Rechte keuken': {
+    fields: [
+      { id: 'f_w',  lbl: 'Breedte',       ph: '300', hint: 'totale lengte van de keuken' },
+      { id: 'f_d',  lbl: 'Diepte kasten', ph: '60',  hint: 'normaal 58–62 cm' },
+    ],
+    svg(d) {
+      return `<svg viewBox="0 0 290 148" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <rect x="50" y="48" width="175" height="52" rx="2" ${_cab}/>
+        <text x="137" y="78" text-anchor="middle" font-size="10" fill="#AAA" font-family="sans-serif">bovenaanzicht</text>
+        ${_eh(50, 48, 118)} ${_eh(225, 48, 118)} ${_hd(50, 225, 113, d.f_w)}
+        ${_ev(48, 225, 258)} ${_ev(100, 225, 258)} ${_vd(48, 100, 244, d.f_d)}
+      </svg>`;
+    }
+  },
+
+  'Hoek': {
+    fields: [
+      { id: 'f_wand1', lbl: 'Wand 1 (lang)', ph: '360', hint: 'lengte van de langste wand' },
+      { id: 'f_wand2', lbl: 'Wand 2 (kort)', ph: '240', hint: 'lengte van de kortste wand' },
+      { id: 'f_d',     lbl: 'Diepte kasten', ph: '60',  hint: 'normaal 58–62 cm' },
+    ],
+    svg(d) {
+      // L-shape: wand1 = horizontaal onderin, wand2 = verticaal links
+      return `<svg viewBox="0 0 290 215" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <polygon points="50,52 100,52 100,130 232,130 232,182 50,182" ${_cab}/>
+        <text x="145" y="160" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">wand 1</text>
+        <text x="72" y="96" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif" transform="rotate(-90,72,96)">wand 2</text>
+        ${_eh(50, 182, 200)} ${_eh(232, 182, 200)} ${_hd(50, 232, 196, d.f_wand1)}
+        ${_ev(52, 28, 50)} ${_ev(182, 28, 50)} ${_vd(52, 182, 20, d.f_wand2)}
+        ${_ev(130, 232, 255)} ${_ev(182, 232, 255)} ${_vd(130, 182, 244, d.f_d)}
+      </svg>`;
+    }
+  },
+
+  'U-vorm': {
+    fields: [
+      { id: 'f_wa', lbl: 'Wand achter',    ph: '300', hint: 'de wand recht vooruit' },
+      { id: 'f_wl', lbl: 'Wand links',     ph: '220', hint: 'linker zijwand' },
+      { id: 'f_wr', lbl: 'Wand rechts',    ph: '220', hint: 'rechter zijwand' },
+      { id: 'f_d',  lbl: 'Diepte kasten',  ph: '60',  hint: 'normaal 58–62 cm' },
+    ],
+    svg(d) {
+      return `<svg viewBox="0 0 295 228" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <polygon points="45,44 240,44 240,188 192,188 192,100 98,100 98,188 45,188" ${_cab}/>
+        <text x="142" y="76" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">wand achter</text>
+        <text x="63" y="148" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif" transform="rotate(-90,63,148)">wand links</text>
+        <text x="220" y="148" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif" transform="rotate(90,220,148)">wand rechts</text>
+        ${_eh(45, 44, 24)} ${_eh(240, 44, 24)} ${_hd(45, 240, 18, d.f_wa)}
+        ${_ev(44, 22, 45)} ${_ev(188, 22, 45)} ${_vd(44, 188, 14, d.f_wl)}
+        ${_ev(44, 240, 262)} ${_ev(188, 240, 262)} ${_vd(44, 188, 252, d.f_wr)}
+        ${_eh(45, 100, 212)} ${_eh(98, 100, 212)} ${_hd(45, 98, 208, d.f_d)}
+      </svg>`;
+    }
+  },
+
+  'Eiland': {
+    fields: [
+      { id: 'f_w',    lbl: 'Breedte keuken', ph: '300', hint: 'lengte van het aanrecht' },
+      { id: 'f_d',    lbl: 'Diepte keuken',  ph: '60'  },
+      { id: 'f_eibr', lbl: 'Breedte eiland', ph: '150' },
+      { id: 'f_eid',  lbl: 'Diepte eiland',  ph: '90'  },
+      { id: 'f_gang', lbl: 'Gangpad',         ph: '120', hint: 'ruimte tussen keuken en eiland' },
+    ],
+    svg(d) {
+      return `<svg viewBox="0 0 290 200" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <rect x="45" y="30" width="195" height="44" rx="2" ${_cab}/>
+        <text x="142" y="56" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">aanrecht</text>
+        <rect x="78" y="130" width="128" height="40" rx="2" ${_cab}/>
+        <text x="142" y="154" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">eiland</text>
+        ${_eh(45, 74, 185)} ${_eh(240, 74, 185)} ${_hd(45, 240, 180, d.f_w)}
+        ${_eh(78, 130, 196)} ${_eh(206, 130, 196)} ${_hd(78, 206, 192, d.f_eibr)}
+        <line x1="252" y1="74" x2="252" y2="130" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>
+        <rect x="255" y="94" width="30" height="13" fill="white"/>
+        <text x="258" y="104" font-size="10" fill="#888" font-family="-apple-system,sans-serif" font-weight="600">${d.f_gang ? d.f_gang+'cm' : '?'}</text>
+      </svg>`;
+    }
+  },
+
+  'Galley': {
+    fields: [
+      { id: 'f_w',    lbl: 'Breedte',         ph: '300', hint: 'lengte van de keuken' },
+      { id: 'f_d',    lbl: 'Diepte rij 1',    ph: '60'  },
+      { id: 'f_eid',  lbl: 'Diepte rij 2',    ph: '60'  },
+      { id: 'f_gang', lbl: 'Gangpad',          ph: '120', hint: 'ruimte tussen de twee rijen' },
+    ],
+    svg(d) {
+      return `<svg viewBox="0 0 290 185" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <rect x="45" y="34" width="195" height="42" rx="2" ${_cab}/>
+        <text x="142" y="58" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">rij 1</text>
+        <rect x="45" y="126" width="195" height="42" rx="2" ${_cab}/>
+        <text x="142" y="150" text-anchor="middle" font-size="9" fill="#AAA" font-family="sans-serif">rij 2</text>
+        ${_eh(45, 34, 176)} ${_eh(240, 34, 176)} ${_hd(45, 240, 172, d.f_w)}
+        ${_ev(76, 248, 245)} ${_ev(126, 248, 245)} ${_vd(76, 126, 239, d.f_gang)}
+        ${_ev(34, 248, 258)} ${_ev(76, 248, 258)} ${_vd(34, 76, 249, d.f_d)}
+      </svg>`;
+    }
+  },
+
+  'Overig': {
+    fields: [
+      { id: 'f_w', lbl: 'Breedte', ph: '300' },
+      { id: 'f_d', lbl: 'Diepte',  ph: '60'  },
+    ],
+    svg(d) {
+      return `<svg viewBox="0 0 290 148" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        <rect x="50" y="48" width="175" height="52" rx="2" fill="none" stroke="#CCC" stroke-width="2" stroke-dasharray="6,3"/>
+        <text x="137" y="78" text-anchor="middle" font-size="11" fill="#CCC" font-family="sans-serif">vrije vorm</text>
+        ${_eh(50, 48, 118)} ${_eh(225, 48, 118)} ${_hd(50, 225, 113, d.f_w)}
+        ${_ev(48, 225, 258)} ${_ev(100, 225, 258)} ${_vd(48, 100, 244, d.f_d)}
+      </svg>`;
+    }
+  },
+};
+
+function renderAfmetingen(type) {
+  const wrap = document.getElementById('afm-wrap');
+  if (!wrap) return;
+  const cfg = DIAGRAM[type] || DIAGRAM['Rechte keuken'];
+  const d = _getDims();
+
+  wrap.innerHTML = `
+    <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:10px 10px 6px;margin-bottom:14px;overflow:hidden">
+      <div id="afm-svg">${cfg.svg(d)}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(cfg.fields.length, 2)},1fr);gap:10px 14px">
+      ${cfg.fields.map(f => `
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">${f.lbl} (cm)</label>
+          <input id="${f.id}" class="fi" type="number" placeholder="${f.ph}" min="0"
+            oninput="updateDiagram('${type}')">
+          ${f.hint ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px">${f.hint}</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+
+  // Bestaande waarden herstellen bij hertekenen
+  cfg.fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el && d[f.id]) el.value = d[f.id];
+  });
+  if (d) {
+    const svgEl = document.getElementById('afm-svg');
+    if (svgEl) svgEl.innerHTML = cfg.svg(_getDims());
+  }
+}
+
+window.updateDiagram = type => {
+  const cfg = DIAGRAM[type] || DIAGRAM['Rechte keuken'];
+  const el = document.getElementById('afm-svg');
+  if (el) el.innerHTML = cfg.svg(_getDims());
+};
 
 // ── HELPERS ───────────────────────────────────────────────
 const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
