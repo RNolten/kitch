@@ -318,6 +318,83 @@
     .alert-ok { background: #F0FFF4; color: #065F46; border: 1px solid #BBF7D0; }
     .divider { border: none; border-top: 1px solid var(--gray-2); margin: 20px 0; }
 
+    /* FORM PAGE */
+    .page-form { max-width: 660px; margin: 0 auto; padding: 32px 24px; }
+    .form-card {
+      background: white; border-radius: var(--r-lg); padding: 28px 32px;
+      box-shadow: var(--sh-sm); border: 1px solid var(--gray-2); margin-bottom: 16px;
+    }
+    .form-card-title {
+      font-size: 12px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--gray-4); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* CHIP SELECTOR */
+    .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chip {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      border: 1.5px solid var(--gray-2); background: white; cursor: pointer;
+      transition: all 0.15s; color: var(--gray-5); user-select: none;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.sel { border-color: var(--accent); background: #FFF3EF; color: var(--accent); }
+
+    /* CHECKBOX GRID */
+    .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .check-item {
+      display: flex; align-items: center; gap: 9px; padding: 9px 12px;
+      border-radius: var(--r-sm); background: var(--gray-1); cursor: pointer;
+      font-size: 13px; font-weight: 500; user-select: none; transition: background 0.1s;
+    }
+    .check-item:has(input:checked) { background: #FFF3EF; }
+    .check-item input[type=checkbox] {
+      accent-color: var(--accent); width: 15px; height: 15px;
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    /* TOGGLE ROW */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 0; border-bottom: 1px solid var(--gray-2);
+    }
+    .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .toggle-label { font-size: 14px; font-weight: 600; }
+    .toggle-sub { font-size: 12px; color: var(--gray-4); margin-top: 2px; }
+    .toggle {
+      width: 44px; height: 26px; border-radius: 13px; background: var(--gray-3);
+      border: none; cursor: pointer; position: relative; transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%; background: white;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on::after { transform: translateX(18px); }
+
+    /* TEKENINGEN UPLOAD */
+    .tekening-drop {
+      border: 2px dashed var(--gray-3); border-radius: var(--r-md);
+      padding: 24px; text-align: center; cursor: pointer;
+      transition: all 0.15s; background: var(--gray-1);
+    }
+    .tekening-drop:hover { border-color: var(--accent); background: #FFF3EF; }
+    .tekening-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .tekening-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--gray-1); border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 500;
+    }
+
+    /* APPARATUUR TAGS (detail page) */
+    .app-tags { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .app-tag {
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      background: var(--gray-1); color: var(--gray-5); border: 1px solid var(--gray-2);
+    }
+
     @media (max-width: 768px) {
       .detail-grid { grid-template-columns: 1fr; }
       .sticky-card { position: static; }
@@ -325,18 +402,21 @@
     }
     @media (max-width: 540px) {
       nav { padding: 0 16px; }
-      .page, .page-narrow { padding: 20px 14px; }
-      .card { padding: 20px 16px; }
+      .page, .page-narrow, .page-form { padding: 20px 14px; }
+      .card, .form-card { padding: 20px 16px; }
       .listings-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
       .row3 { grid-template-columns: 1fr; }
       .role-grid { grid-template-columns: 1fr; }
       .hero { padding: 48px 20px; }
+      .check-grid { grid-template-columns: 1fr; }
+      .chip-group .chip { font-size: 12px; padding: 6px 12px; }
     }
   </style>
 </head>
 <body>
 <div id="app"><div class="spin-wrap"><div class="spin"></div></div></div>
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
+<input type="file" id="fileInTekening" accept="image/*,.pdf" multiple style="display:none">
 
 <script>
 const SB_URL = 'https://eakmmmylfqqjflnacrub.supabase.co';
@@ -344,7 +424,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const { createClient } = supabase;
 const db = createClient(SB_URL, SB_KEY);
 
-let user = null, profile = null, pendingPhotos = [];
+let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [];
 
 // ── ROUTER ────────────────────────────────────────────────
 async function router() {
@@ -470,12 +550,16 @@ async function pageHome(el) {
       ${data.map(l => {
         const photos = sort(l.listing_photos);
         const img = photos[0]?.url;
+        const tags = [l.keuken_type, l.conditie].filter(Boolean);
         return `<div class="listing-card" onclick="go('k/${l.id}')">
           <div class="listing-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '🍳'}</div>
           <div class="listing-body">
             <div class="listing-title">${esc(l.title)}</div>
             <div class="listing-brand">${esc(l.brand || '')}${l.color ? ' · ' + esc(l.color) : ''}</div>
-            ${l.width_cm ? `<div class="listing-dims">
+            ${tags.length ? `<div class="listing-dims">
+              ${tags.map(t => `<span class="dim-tag">${esc(t)}</span>`).join('')}
+              ${l.width_cm ? `<span class="dim-tag">↔ ${l.width_cm}cm</span>` : ''}
+            </div>` : l.width_cm ? `<div class="listing-dims">
               <span class="dim-tag">↔ ${l.width_cm}cm</span>
               ${l.depth_cm ? `<span class="dim-tag">↕ ${l.depth_cm}cm</span>` : ''}
               ${l.height_cm ? `<span class="dim-tag">↑ ${l.height_cm}cm</span>` : ''}
@@ -496,7 +580,7 @@ async function pageDetail(el, id) {
 
   const { data: l, error } = await db
     .from('listings')
-    .select('*, listing_photos(url, order_index), profiles(name, phone, contact_email)')
+    .select('*, listing_photos(url, order_index, foto_type), profiles(name, phone, contact_email)')
     .eq('id', id)
     .single();
 
@@ -509,7 +593,9 @@ async function pageDetail(el, id) {
 
   if (error || !l) { el.innerHTML = `<div class="page">${err('Keuken niet gevonden.')}</div>`; return; }
 
-  const photos = sort(l.listing_photos);
+  const allPhotos = sort(l.listing_photos);
+  const photos = allPhotos.filter(p => p.foto_type !== 'tekening');
+  const tekeningen = allPhotos.filter(p => p.foto_type === 'tekening');
   let active = 0;
 
   function galleryHTML() {
@@ -530,13 +616,27 @@ async function pageDetail(el, id) {
   const sn    = l.profiles?.name || 'Aanbieder';
   const phone = l.profiles?.phone || null;
   const cemail= l.profiles?.contact_email || null;
+
   const specs = [
-    l.brand   && { l: 'Merk',    v: l.brand },
-    l.color   && { l: 'Kleur',   v: l.color },
-    l.width_cm  && { l: 'Breedte', v: l.width_cm + ' cm' },
-    l.depth_cm  && { l: 'Diepte',  v: l.depth_cm + ' cm' },
-    l.height_cm && { l: 'Hoogte',  v: l.height_cm + ' cm' },
+    l.keuken_type   && { l: 'Type',      v: l.keuken_type },
+    l.conditie      && { l: 'Conditie',  v: l.conditie },
+    l.brand         && { l: 'Merk',      v: l.brand },
+    l.color         && { l: 'Kleur',     v: l.color },
+    l.materiaal_blad && { l: 'Blad',     v: l.materiaal_blad },
+    l.leeftijd_jaar && { l: 'Leeftijd',  v: l.leeftijd_jaar + ' jaar' },
+    l.width_cm      && { l: 'Breedte',   v: l.width_cm + ' cm' },
+    l.depth_cm      && { l: 'Diepte',    v: l.depth_cm + ' cm' },
+    l.height_cm     && { l: 'Hoogte',    v: l.height_cm + ' cm' },
   ].filter(Boolean);
+
+  const praktisch = [
+    l.ophalen_bezorgen && { icon: '🚚', v: l.ophalen_bezorgen },
+    l.demontage        && { icon: '🔧', v: l.demontage },
+    l.incl_bovenkasten && { icon: '✅', v: 'Inclusief bovenkasten' },
+    l.incl_spoelbak    && { icon: '✅', v: 'Inclusief spoelbak' },
+  ].filter(Boolean);
+
+  const apparatuurItems = l.apparatuur ? l.apparatuur.split(', ').filter(Boolean) : [];
 
   el.innerHTML = `<div class="page">
     <button class="back" onclick="go('')">← Terug naar overzicht</button>
@@ -546,6 +646,29 @@ async function pageDetail(el, id) {
         ${l.description ? `<div class="desc-block">
           <h3>Omschrijving</h3>
           <div class="desc-text">${esc(l.description)}</div>
+        </div>` : ''}
+        ${apparatuurItems.length ? `<div class="desc-block">
+          <h3>Apparatuur inbegrepen</h3>
+          <div class="app-tags">
+            ${apparatuurItems.map(a => `<span class="app-tag">✓ ${esc(a)}</span>`).join('')}
+          </div>
+        </div>` : ''}
+        ${praktisch.length ? `<div class="desc-block">
+          <h3>Praktisch</h3>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+            ${praktisch.map(p => `<div style="font-size:13px;font-weight:500;color:var(--gray-5)">${p.icon} ${esc(p.v)}</div>`).join('')}
+          </div>
+        </div>` : ''}
+        ${tekeningen.length ? `<div class="desc-block">
+          <h3>Maattekeningen & plattegronden</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+            ${tekeningen.map((t, i) => {
+              const isPdf = t.url.toLowerCase().includes('.pdf') || t.url.toLowerCase().endsWith('pdf');
+              return isPdf
+                ? `<a href="${t.url}" target="_blank" style="display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--gray-1);border-radius:var(--r-sm);text-decoration:none;color:var(--black);font-size:13px;font-weight:600;border:1px solid var(--gray-2)">📄 Tekening ${i+1}</a>`
+                : `<a href="${t.url}" target="_blank"><img src="${t.url}" style="height:90px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--gray-2)" alt="Tekening ${i+1}"></a>`;
+            }).join('')}
+          </div>
         </div>` : ''}
       </div>
       <div>
@@ -624,45 +747,161 @@ async function pageAanbieden(el) {
   }
 
   pendingPhotos = [];
+  pendingTekeningen = [];
 
-  el.innerHTML = `<div class="page-narrow"><div class="card">
-    <div class="card-title">Keuken aanbieden</div>
-    <div class="card-sub">Hoe meer info, hoe sneller je een koper vindt.</div>
+  const chips = (group, options) => options.map(v =>
+    `<div class="chip" data-group="${group}" data-val="${v}" onclick="selChip(this)">${v}</div>`
+  ).join('');
+
+  el.innerHTML = `<div class="page-form">
+    <div style="margin-bottom:28px">
+      <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px">Keuken aanbieden</h1>
+      <div style="font-size:14px;color:var(--gray-4)">Hoe completer je advertentie, hoe sneller je een koper vindt.</div>
+    </div>
     <div id="fa"></div>
 
-    <div class="fg"><label class="fl">Titel *</label>
-      <input id="f_t" class="fi" placeholder="Bijv. Witte IKEA Metod keuken, 3 meter" maxlength="100"></div>
-
-    <div class="row2">
-      <div class="fg"><label class="fl">Merk</label><input id="f_b" class="fi" placeholder="IKEA, Siematic…"></div>
-      <div class="fg"><label class="fl">Kleur</label><input id="f_c" class="fi" placeholder="Wit, antraciet…"></div>
-    </div>
-
-    <div class="fg"><label class="fl">Afmetingen (cm)</label>
-      <div class="row3">
-        <input id="f_w" class="fi" type="number" placeholder="Breedte">
-        <input id="f_d" class="fi" type="number" placeholder="Diepte">
-        <input id="f_h" class="fi" type="number" placeholder="Hoogte">
-      </div>
-    </div>
-
-    <div class="fg"><label class="fl">Omschrijving</label>
-      <textarea id="f_desc" class="ft" placeholder="Staat van de keuken, wat zit erbij, bijzonderheden…"></textarea>
-    </div>
-
-    <div class="row2">
-      <div class="fg"><label class="fl">Vraagprijs (€) *</label><input id="f_p" class="fi" type="number" placeholder="500"></div>
-      <div class="fg"><label class="fl">Stad *</label><input id="f_city" class="fi" placeholder="Amsterdam"></div>
-    </div>
-
-    <div class="fg"><label class="fl">Foto's (max 6)</label>
+    <div class="form-card">
+      <div class="form-card-title">📷 Foto's</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Voeg minimaal één foto toe — meer foto's = meer reacties. Max 6.</div>
       <div class="photo-grid" id="pg">${photoGridHTML()}</div>
     </div>
 
-    <button class="submit-btn" id="sb" onclick="submitListing()">Advertentie plaatsen</button>
-  </div></div>`;
+    <div class="form-card">
+      <div class="form-card-title">🏷️ Over de keuken</div>
+      <div class="fg" style="margin-bottom:20px"><label class="fl">Titel *</label>
+        <input id="f_t" class="fi" placeholder="Bijv. Witte IKEA Metod hoekopstelling, 3,5 meter" maxlength="100"></div>
+      <div class="row2">
+        <div class="fg"><label class="fl">Vraagprijs (€) *</label>
+          <input id="f_p" class="fi" type="number" placeholder="750" min="0"></div>
+        <div class="fg"><label class="fl">Stad *</label>
+          <input id="f_city" class="fi" placeholder="Amsterdam"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">✨ Kenmerken</div>
+
+      <div class="fg"><label class="fl">Type keuken</label>
+        <div class="chip-group">
+          ${chips('keuken_type', ['Rechte keuken','Hoek','U-vorm','Eiland','Galley','Overig'])}
+        </div>
+      </div>
+
+      <div class="fg"><label class="fl">Conditie</label>
+        <div class="chip-group">
+          ${chips('conditie', ['Zo goed als nieuw','Goed','Normaal gebruik','Heeft gebreken'])}
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fg"><label class="fl">Kleur</label>
+          <input id="f_c" class="fi" placeholder="Wit, antraciet, hout…"></div>
+        <div class="fg"><label class="fl">Merk</label>
+          <input id="f_b" class="fi" placeholder="IKEA, Siematic, Nobilia…"></div>
+      </div>
+
+      <div class="fg"><label class="fl">Materiaal keukenblad</label>
+        <div class="chip-group">
+          ${chips('materiaal_blad', ['Composiet','Keramiek','Graniet','Hout','Kunststof','RVS','Overig'])}
+        </div>
+      </div>
+
+      <div class="fg" style="max-width:200px"><label class="fl">Leeftijd (jaar)</label>
+        <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">📐 Afmetingen (cm)</div>
+      <div class="row3">
+        <div class="fg"><label class="fl">Breedte</label>
+          <input id="f_w" class="fi" type="number" placeholder="300"></div>
+        <div class="fg"><label class="fl">Diepte</label>
+          <input id="f_d" class="fi" type="number" placeholder="60"></div>
+        <div class="fg"><label class="fl">Hoogte</label>
+          <input id="f_h" class="fi" type="number" placeholder="210"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">⚙️ Apparatuur inbegrepen</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Selecteer wat er bij de keuken inbegrepen is.</div>
+      <div class="check-grid">
+        ${[
+          ['app_oven','🔲 Oven'],
+          ['app_magnet','📡 Magnetron'],
+          ['app_combi','🔄 Combimagnetron'],
+          ['app_koelkast','🧊 Koelkast'],
+          ['app_vriezer','❄️ Vriezer'],
+          ['app_vaatwasser','🫧 Vaatwasser'],
+          ['app_inductie','⚡ Inductiekookplaat'],
+          ['app_gas','🔥 Gaskookplaat'],
+          ['app_ceran','◼️ Ceranfeldkookplaat'],
+          ['app_afzuig','💨 Afzuigkap'],
+          ['app_wijn','🍷 Wijnklimaatkast'],
+          ['app_quooker','💧 Quooker / kokendwater'],
+        ].map(([id, label]) =>
+          `<label class="check-item"><input type="checkbox" id="${id}"> ${label}</label>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">💬 Omschrijving</div>
+      <textarea id="f_desc" class="ft" style="min-height:130px"
+        placeholder="Vertel meer over de staat van de keuken, waarom je hem verkoopt, bijzonderheden…"></textarea>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">📄 Maattekeningen & plattegronden</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Monteurs waarderen tekeningen enorm — het scheelt hen een bezoek vooraf. Voeg eventuele bouw- of installatietekeningen toe (PDF of afbeelding).</div>
+      <div class="tekening-drop" onclick="document.getElementById('fileInTekening').click()">
+        <div style="font-size:28px;margin-bottom:6px">📐</div>
+        <div style="font-size:14px;font-weight:600;color:var(--gray-5)">Klik om bestand toe te voegen</div>
+        <div style="font-size:12px;color:var(--gray-4);margin-top:4px">PDF, JPG of PNG · max 5 bestanden</div>
+      </div>
+      <div class="tekening-list" id="tl"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">🚚 Praktisch</div>
+
+      <div class="fg"><label class="fl">Ophalen / bezorgen</label>
+        <div class="chip-group">
+          ${chips('ophalen_bezorgen', ['Alleen ophalen','Bezorging mogelijk (meerkosten)','Bezorging inbegrepen'])}
+        </div>
+      </div>
+
+      <div class="fg"><label class="fl">Demontage</label>
+        <div class="chip-group">
+          ${chips('demontage', ['Zelf te demonteren','Professionele demontage nodig','Demontage inbegrepen'])}
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Inclusief bovenkasten</div>
+            <div class="toggle-sub">Hangkasten en wandkasten inbegrepen</div>
+          </div>
+          <button class="toggle" id="tgl_boven" onclick="toggleBtn('tgl_boven')"></button>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Inclusief spoelbak</div>
+            <div class="toggle-sub">Spoelbak en/of kraan inbegrepen</div>
+          </div>
+          <button class="toggle" id="tgl_spoelbak" onclick="toggleBtn('tgl_spoelbak')"></button>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="sb" onclick="submitListing()" style="margin-bottom:48px">
+      Advertentie plaatsen →
+    </button>
+  </div>`;
 
   document.getElementById('fileIn').onchange = onPhotoSelect;
+  document.getElementById('fileInTekening').onchange = onTekeningSel;
 
   el.addEventListener('click', e => {
     const slot = e.target.closest('.photo-slot');
@@ -671,6 +910,42 @@ async function pageAanbieden(el) {
     }
   });
 }
+
+window.selChip = el => {
+  const group = el.getAttribute('data-group');
+  const was = el.classList.contains('sel');
+  document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c => c.classList.remove('sel'));
+  if (!was) el.classList.add('sel');
+};
+
+window.toggleBtn = id => {
+  document.getElementById(id).classList.toggle('on');
+};
+
+function onTekeningSel(e) {
+  const left = 5 - pendingTekeningen.length;
+  Array.from(e.target.files).slice(0, left).forEach(file => {
+    pendingTekeningen.push({ file });
+    renderTekenList();
+  });
+  e.target.value = '';
+}
+
+function renderTekenList() {
+  const tl = document.getElementById('tl');
+  if (!tl) return;
+  tl.innerHTML = pendingTekeningen.map((t, i) =>
+    `<div class="tekening-item">
+      <span>📄 ${esc(t.file.name)}</span>
+      <button onclick="rmTekening(${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-4);font-size:18px;line-height:1;padding:0 2px">×</button>
+    </div>`
+  ).join('');
+}
+
+window.rmTekening = i => {
+  pendingTekeningen.splice(i, 1);
+  renderTekenList();
+};
 
 function photoGridHTML() {
   return Array.from({ length: 6 }, (_, i) => {
@@ -709,7 +984,23 @@ window.rmPhoto = i => {
 window.submitListing = async () => {
   const title = v('f_t'), price = parseInt(v('f_p')), city = v('f_city');
   const fa = document.getElementById('fa');
-  if (!title || !price || !city) { fa.innerHTML = err('Vul minimaal een titel, prijs en stad in.'); return; }
+  if (!title || !price || !city) {
+    fa.innerHTML = err('Vul minimaal een titel, prijs en stad in.');
+    fa.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const chipVal = group =>
+    document.querySelector(`.chip[data-group="${group}"].sel`)?.getAttribute('data-val') || null;
+  const isOn = id => document.getElementById(id)?.classList.contains('on') || false;
+
+  const appMap = [
+    ['app_oven','Oven'],['app_magnet','Magnetron'],['app_combi','Combimagnetron'],
+    ['app_koelkast','Koelkast'],['app_vriezer','Vriezer'],['app_vaatwasser','Vaatwasser'],
+    ['app_inductie','Inductiekookplaat'],['app_gas','Gaskookplaat'],['app_ceran','Ceranfeldkookplaat'],
+    ['app_afzuig','Afzuigkap'],['app_wijn','Wijnklimaatkast'],['app_quooker','Quooker'],
+  ];
+  const checkedApp = appMap.filter(([id]) => document.getElementById(id)?.checked).map(([,lbl]) => lbl);
 
   const sb = document.getElementById('sb');
   sb.disabled = true;
@@ -717,7 +1008,6 @@ window.submitListing = async () => {
   fa.innerHTML = '';
 
   try {
-    // Zorg dat profiel bestaat (vangnet als trigger niet vuurde)
     await db.from('profiles').upsert({
       id: user.id,
       name: profile?.name || user.email?.split('@')[0] || '',
@@ -726,14 +1016,25 @@ window.submitListing = async () => {
 
     const { data: listing, error: le } = await db.from('listings').insert({
       user_id: user.id, title, price, city,
-      brand: v('f_b') || null, color: v('f_c') || null,
+      brand: v('f_b') || null,
+      color: v('f_c') || null,
       width_cm: parseInt(v('f_w')) || null,
       depth_cm: parseInt(v('f_d')) || null,
       height_cm: parseInt(v('f_h')) || null,
       description: v('f_desc') || null,
+      keuken_type: chipVal('keuken_type'),
+      conditie: chipVal('conditie'),
+      materiaal_blad: chipVal('materiaal_blad'),
+      leeftijd_jaar: parseInt(v('f_age')) || null,
+      apparatuur: checkedApp.length ? checkedApp.join(', ') : null,
+      demontage: chipVal('demontage'),
+      ophalen_bezorgen: chipVal('ophalen_bezorgen'),
+      incl_bovenkasten: isOn('tgl_boven'),
+      incl_spoelbak: isOn('tgl_spoelbak'),
     }).select().single();
     if (le) throw le;
 
+    // Foto's uploaden
     for (let i = 0; i < pendingPhotos.length; i++) {
       const { file } = pendingPhotos[i];
       const ext = file.name.split('.').pop();
@@ -741,14 +1042,26 @@ window.submitListing = async () => {
       const { error: ue } = await db.storage.from('photos').upload(path, file, { cacheControl: '3600' });
       if (ue) throw ue;
       const { data: { publicUrl } } = db.storage.from('photos').getPublicUrl(path);
-      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: i });
+      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: i, foto_type: 'foto' });
+    }
+
+    // Tekeningen uploaden
+    for (let i = 0; i < pendingTekeningen.length; i++) {
+      const { file } = pendingTekeningen[i];
+      const ext = file.name.split('.').pop();
+      const path = `${listing.id}/tek-${i}-${Date.now()}.${ext}`;
+      const { error: ue } = await db.storage.from('photos').upload(path, file, { cacheControl: '3600' });
+      if (ue) throw ue;
+      const { data: { publicUrl } } = db.storage.from('photos').getPublicUrl(path);
+      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: 100 + i, foto_type: 'tekening' });
     }
 
     go(`k/${listing.id}`);
   } catch (e) {
     fa.innerHTML = err(e.message);
+    fa.scrollIntoView({ behavior: 'smooth', block: 'center' });
     sb.disabled = false;
-    sb.innerHTML = 'Advertentie plaatsen';
+    sb.innerHTML = 'Advertentie plaatsen →';
   }
 };
 
