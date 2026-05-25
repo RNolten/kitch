@@ -462,7 +462,7 @@ async function pageDetail(el, id) {
 
   const { data: l, error } = await db
     .from('listings')
-    .select('*, listing_photos(url, order_index), profiles(name)')
+    .select('*, listing_photos(url, order_index), profiles(name, phone, contact_email)')
     .eq('id', id)
     .single();
 
@@ -486,7 +486,9 @@ async function pageDetail(el, id) {
     document.getElementById('gw').innerHTML = galleryHTML();
   };
 
-  const sn = l.profiles?.name || 'Aanbieder';
+  const sn    = l.profiles?.name || 'Aanbieder';
+  const phone = l.profiles?.phone || null;
+  const cemail= l.profiles?.contact_email || null;
   const specs = [
     l.brand   && { l: 'Merk',    v: l.brand },
     l.color   && { l: 'Kleur',   v: l.color },
@@ -513,7 +515,13 @@ async function pageDetail(el, id) {
           ${specs.length ? `<div class="specs">
             ${specs.map(s => `<div class="spec"><div class="spec-lbl">${s.l}</div><div class="spec-val">${esc(s.v)}</div></div>`).join('')}
           </div>` : ''}
-          <button class="cta-btn" onclick="contact('${id}')">Ik ben geïnteresseerd</button>
+          ${phone || cemail ? `
+            <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--gray-4)">Neem contact op</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+              ${phone ? `<a href="https://wa.me/${waNum(phone)}?text=${encodeURIComponent('Hoi! Ik heb je keuken gezien op KitchKitch: ' + l.title + ' voor €' + l.price + '. Ik ben geïnteresseerd!')}" target="_blank" class="cta-btn" style="flex:1;text-decoration:none;text-align:center;background:#25D366">💬 WhatsApp</a>` : ''}
+              ${cemail ? `<a href="mailto:${cemail}?subject=${encodeURIComponent('Interesse in: ' + l.title)}&body=${encodeURIComponent('Hoi,\n\nIk heb je keuken gezien op KitchKitch (' + l.title + ' voor €' + l.price + ') en ben geïnteresseerd.\n\nGroet')}" class="cta-btn" style="flex:1;text-decoration:none;text-align:center;background:#1C1C1E">✉️ E-mail</a>` : ''}
+            </div>
+          ` : `<button class="cta-btn" onclick="contact()">Ik ben geïnteresseerd</button>`}
           <div class="seller-row">
             <div class="seller-av">${sn[0]?.toUpperCase() || '?'}</div>
             <div>
@@ -527,10 +535,17 @@ async function pageDetail(el, id) {
   </div>`;
 }
 
-window.contact = id => {
+window.contact = () => {
   if (!user) { go('login'); return; }
-  alert('Contactfunctie komt binnenkort! We sturen jouw interesse door naar de aanbieder.');
+  alert('Deze aanbieder heeft nog geen contactgegevens ingevuld.');
 };
+
+function waNum(num) {
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('0')) return '31' + clean.slice(1);
+  if (clean.startsWith('31')) return clean;
+  return clean;
+}
 
 // ── AANBIEDEN ─────────────────────────────────────────────
 async function pageAanbieden(el) {
@@ -754,6 +769,23 @@ async function pageMijn(el) {
       </div>
       <button class="btn btn-ghost" onclick="uitloggen()">Uitloggen</button>
     </div>
+
+    <div class="card" style="margin-bottom:28px">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px">Contactgegevens</h2>
+      <div id="profile-alert"></div>
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">WhatsApp nummer</label>
+          <input id="p_phone" class="fi" placeholder="0612345678" value="${esc(profile?.phone || '')}">
+        </div>
+        <div class="fg">
+          <label class="fl">Contact e-mailadres</label>
+          <input id="p_email" class="fi" type="email" placeholder="jij@email.nl" value="${esc(profile?.contact_email || '')}">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile()">Opslaan</button>
+    </div>
+
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <h2 style="font-size:17px;font-weight:700">Mijn advertenties</h2>
       <button class="btn btn-primary" onclick="go('aanbieden')">+ Toevoegen</button>
@@ -779,6 +811,17 @@ async function pageMijn(el) {
     }).join('')}
   </div>`;
 }
+
+window.saveProfile = async () => {
+  const phone = document.getElementById('p_phone')?.value?.trim() || null;
+  const contact_email = document.getElementById('p_email')?.value?.trim() || null;
+  const al = document.getElementById('profile-alert');
+  const { error } = await db.from('profiles').update({ phone, contact_email }).eq('id', user.id);
+  if (error) { al.innerHTML = `<div class="alert alert-err">⚠️ ${error.message}</div>`; return; }
+  profile = { ...profile, phone, contact_email };
+  al.innerHTML = `<div class="alert alert-ok">✅ Opgeslagen!</div>`;
+  setTimeout(() => { al.innerHTML = ''; }, 3000);
+};
 
 window.uitloggen = async () => {
   await db.auth.signOut();
