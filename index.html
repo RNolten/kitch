@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeukenCheck</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 24px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+        .logo .accent { color: #f97316; }
+        .step-pills { display: flex; gap: 5px; align-items: center; }
+        .step-pill {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #e2e8f0; transition: background 0.3s;
+        }
+        .step-pill.active { background: #f97316; width: 22px; border-radius: 4px; }
+        .step-pill.done { background: #22c55e; }
+
+        /* === LAYOUT === */
+        .container { max-width: 680px; margin: 36px auto; padding: 0 20px; }
+
+        /* === CARD === */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.04);
+        }
+        .card-title { font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #0f172a; }
+        .card-subtitle { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.55; }
+
+        /* === FORM === */
+        .form-group { margin-bottom: 18px; }
+        .form-label {
+            display: block; font-size: 11px; font-weight: 700;
+            color: #94a3b8; margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .form-input {
+            width: 100%; padding: 10px 13px;
+            border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 14px; outline: none; transition: border-color 0.15s;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            background: #f8fafc;
+        }
+        .form-input:focus { border-color: #f97316; background: white; }
+
+        /* === UPLOAD ZONE === */
+        .upload-zone {
+            border: 2px dashed #cbd5e1; border-radius: 12px;
+            padding: 44px 24px; text-align: center; cursor: pointer;
+            transition: all 0.2s; background: #f8fafc; margin-bottom: 4px;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #f97316; background: #fff7ed; }
+        .upload-zone.has-file { border-color: #22c55e; border-style: solid; background: #f0fdf4; }
+        .upload-icon { font-size: 44px; margin-bottom: 10px; line-height: 1; }
+        .upload-text { font-size: 15px; font-weight: 600; color: #374151; }
+        .upload-hint { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+        /* === BUTTONS === */
+        .btn {
+            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 14px; font-weight: 600; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 7px;
+        }
+        .btn-primary { background: #f97316; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #ea6c0a; box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
+        .btn-secondary { background: #f1f5f9; color: #475569; }
+        .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+        /* === LOADING === */
+        .loading { text-align: center; padding: 52px 24px; }
+        .spinner {
+            width: 42px; height: 42px;
+            border: 3px solid #f1f5f9; border-top-color: #f97316;
+            border-radius: 50%; animation: spin 0.75s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 15px; font-weight: 600; color: #374151; }
+        .loading-sub { font-size: 13px; color: #94a3b8; margin-top: 5px; }
+
+        /* === CHECKPOINTS === */
+        .checkpoint-list { display: flex; flex-direction: column; gap: 10px; }
+        .checkpoint-item {
+            border: 1.5px solid #e2e8f0; border-radius: 10px;
+            padding: 14px 16px; display: flex; align-items: flex-start; gap: 13px;
+        }
+        .checkpoint-item.critical { border-color: #fed7aa; background: #fffbf7; }
+        .cp-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0; margin-top: 1px;
+        }
+        .cp-icon.elektra { background: #fef9c3; }
+        .cp-icon.water    { background: #dbeafe; }
+        .cp-icon.afvoer   { background: #ede9fe; }
+        .cp-icon.gas      { background: #fce7f3; }
+        .cp-body { flex: 1; min-width: 0; }
+        .cp-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+        .cp-loc  { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .cp-instr { font-size: 12px; color: #94a3b8; margin-top: 3px; font-style: italic; }
+        .critical-badge {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.4px; color: #ea580c; background: #ffedd5;
+            padding: 3px 8px; border-radius: 20px; flex-shrink: 0; white-space: nowrap;
+        }
+        .checkpoint-count {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 16px;
+        }
+
+        /* === CUSTOMER FLOW === */
+        .customer-view { max-width: 420px; margin: 0 auto; }
+        .progress-header { text-align: center; margin-bottom: 20px; }
+        .progress-label { font-size: 13px; color: #94a3b8; font-weight: 500; margin-bottom: 8px; }
+        .progress-bar {
+            width: 100%; height: 4px; background: #e2e8f0;
+            border-radius: 2px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: #f97316;
+            border-radius: 2px; transition: width 0.4s ease;
+        }
+        .photo-type-label {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 12px; font-weight: 600; color: #64748b;
+            background: #f1f5f9; padding: 4px 10px; border-radius: 20px;
+            margin-bottom: 10px;
+        }
+        .photo-main-instr {
+            font-size: 17px; font-weight: 700; text-align: center;
+            color: #0f172a; margin-bottom: 6px; line-height: 1.35;
+        }
+        .photo-detail {
+            font-size: 13px; color: #64748b; text-align: center; margin-bottom: 20px;
+        }
+        .photo-upload-area {
+            border: 2px dashed #cbd5e1; border-radius: 16px;
+            padding: 0; text-align: center; cursor: pointer;
+            transition: all 0.2s; background: #f8fafc;
+            min-height: 220px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; overflow: hidden;
+        }
+        .photo-upload-area:hover { border-color: #f97316; background: #fff7ed; }
+        .photo-upload-area.has-photo { border-style: solid; border-color: #22c55e; background: white; }
+        .photo-preview { width: 100%; max-height: 260px; object-fit: contain; display: block; }
+        .camera-icon { font-size: 52px; margin-bottom: 12px; line-height: 1; }
+        .photo-upload-text { font-size: 15px; font-weight: 600; color: #374151; }
+        .photo-upload-hint { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+        /* === REPORT === */
+        .report-summary { display: flex; gap: 12px; margin-bottom: 24px; }
+        .summary-card {
+            flex: 1; padding: 16px 12px; border-radius: 10px; text-align: center;
+        }
+        .summary-card.green  { background: #dcfce7; }
+        .summary-card.orange { background: #ffedd5; }
+        .summary-card.red    { background: #fee2e2; }
+        .summary-number { font-size: 34px; font-weight: 800; line-height: 1; }
+        .summary-card.green  .summary-number { color: #16a34a; }
+        .summary-card.orange .summary-number { color: #ea580c; }
+        .summary-card.red    .summary-number { color: #dc2626; }
+        .summary-label { font-size: 11px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-card.green  .summary-label { color: #16a34a; }
+        .summary-card.orange .summary-label { color: #ea580c; }
+        .summary-card.red    .summary-label { color: #dc2626; }
+
+        .result-item {
+            border: 1.5px solid #e2e8f0; border-radius: 10px;
+            padding: 14px 16px; display: flex; align-items: flex-start;
+            gap: 12px; margin-bottom: 10px;
+        }
+        .result-item.status-aanwezig    { border-color: #86efac; background: #f0fdf4; }
+        .result-item.status-twijfelachtig { border-color: #fdba74; background: #fff7ed; }
+        .result-item.status-ontbreekt   { border-color: #fca5a5; background: #fef2f2; }
+        .result-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+        .result-body { flex: 1; min-width: 0; }
+        .result-name { font-size: 14px; font-weight: 600; }
+        .result-expl { font-size: 13px; color: #64748b; margin-top: 3px; line-height: 1.4; }
+        .result-photo {
+            width: 58px; height: 58px; object-fit: cover;
+            border-radius: 7px; flex-shrink: 0; cursor: pointer;
+        }
+
+        /* === ALERTS === */
+        .alert {
+            padding: 11px 15px; border-radius: 9px; font-size: 13px;
+            margin-bottom: 20px; line-height: 1.5; display: flex; gap: 8px;
+        }
+        .alert-info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        .divider { border: none; border-top: 1px solid #f1f5f9; margin: 22px 0; }
+
+        @media (max-width: 480px) {
+            .container { padding: 0 12px; margin: 16px auto; }
+            .card { padding: 20px 18px; }
+            .report-summary { flex-direction: column; }
+        }
+
+        @media print {
+            .header { display: none; }
+            .btn-row { display: none; }
+            .card { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">Keuken<span class="accent">Check</span></div>
+    <div class="step-pills" id="stepPills"></div>
+</div>
+
+<div class="container">
+    <div id="root"></div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="drawingInput" accept="image/*,.pdf" style="display:none">
+<input type="file" id="photoInput"   accept="image/*" capture="environment" style="display:none">
+
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+    step: 'setup',
+    apiKey: localStorage.getItem('kc_key') || '',
+    drawing: null,        // { base64, mimeType, filename }
+    checkpoints: [],      // [{id, type, description, location, photo_instruction, critical}]
+    customerStep: 0,
+    photos: {},           // id -> { base64, mimeType, previewUrl }
+    results: {},          // id -> { status, explanation }
+    error: null
+};
+
+const STEPS = ['setup', 'upload', 'review', 'customer', 'report'];
+
+// ============================================================
+//  RENDER DISPATCHER
+// ============================================================
+function render() {
+    updatePills();
+    const root = document.getElementById('root');
+    const map = {
+        setup:     renderSetup,
+        upload:    renderUpload,
+        analyzing: renderAnalyzing,
+        review:    renderReview,
+        customer:  renderCustomer,
+        reporting: renderReporting,
+        report:    renderReport
+    };
+    root.innerHTML = (map[state.step] || renderSetup)();
+    attachHandlers();
+}
+
+function updatePills() {
+    const visual = { analyzing: 'upload', reporting: 'customer' };
+    const cur = visual[state.step] || state.step;
+    const idx = STEPS.indexOf(cur);
+    document.getElementById('stepPills').innerHTML = STEPS.map((s, i) =>
+        `<div class="step-pill ${i < idx ? 'done' : i === idx ? 'active' : ''}"></div>`
+    ).join('');
+}
+
+// ============================================================
+//  STEPS
+// ============================================================
+
+/* --- SETUP --- */
+function renderSetup() {
+    return `
+    <div class="card">
+        <div class="card-title">Welkom bij KeukenCheck</div>
+        <div class="card-subtitle">Upload een technische keukentekening. De app leest alle aansluitpunten uit en stuurt de klant door een simpele fotoreeks. Jij krijgt een stoplichtrapport terug vóór de montage.</div>
+
+        <div class="alert alert-info">ℹ️ Voor de AI-analyse is een Anthropic API-sleutel nodig. Je vindt die op <strong>console.anthropic.com</strong>.</div>
+
+        <div class="form-group">
+            <label class="form-label">API-sleutel</label>
+            <input type="password" class="form-input" id="apiKeyInput"
+                   placeholder="sk-ant-api03-…"
+                   value="${state.apiKey}" autocomplete="off">
+        </div>
+
+        <div class="btn-row" style="justify-content:flex-start; margin-top:8px;">
+            <button class="btn btn-primary" id="setupNextBtn" ${state.apiKey ? '' : 'disabled'}>
+                Verder →
+            </button>
+        </div>
+    </div>`;
+}
+
+/* --- UPLOAD --- */
+function renderUpload() {
+    const has = !!state.drawing;
+    return `
+    <div class="card">
+        <div class="card-title">Technische tekening</div>
+        <div class="card-subtitle">Upload de installatietekening van de keuken. We analyseren automatisch alle elektra- en wateraansluitpunten.</div>
+
+        ${state.error ? `<div class="alert alert-error">⚠️ ${state.error}</div>` : ''}
+
+        <div class="upload-zone ${has ? 'has-file' : ''}" id="uploadZone">
+            ${has ? `
+                <div class="upload-icon">✅</div>
+                <div class="upload-text">${state.drawing.filename}</div>
+                <div class="upload-hint">Klik om een ander bestand te kiezen</div>
+            ` : `
+                <div class="upload-icon">📐</div>
+                <div class="upload-text">Sleep de tekening hierheen</div>
+                <div class="upload-hint">of klik om te bladeren · PNG, JPG of PDF</div>
+            `}
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-secondary" id="backSetupBtn">← Terug</button>
+            <button class="btn btn-primary" id="analyzeBtn" ${has ? '' : 'disabled'}>
+                Analyseer tekening →
+            </button>
+        </div>
+    </div>`;
+}
+
+/* --- ANALYZING --- */
+function renderAnalyzing() {
+    return `
+    <div class="card">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Tekening wordt geanalyseerd…</div>
+            <div class="loading-sub">Dit duurt meestal 10–20 seconden</div>
+        </div>
+    </div>`;
+}
+
+/* --- REVIEW --- */
+function renderReview() {
+    const icons = { elektra: '⚡', water: '💧', afvoer: '🔧', gas: '🔥' };
+    return `
+    <div class="card">
+        <div class="card-title">Gevonden aansluitpunten</div>
+        <div class="card-subtitle">Controleer of de lijst klopt. Daarna genereren we de fotoreeks voor de klant.</div>
+
+        <div class="checkpoint-count">
+            <span>📋</span> ${state.checkpoints.length} aansluitpunten gevonden
+        </div>
+
+        <div class="checkpoint-list">
+            ${state.checkpoints.map(cp => `
+            <div class="checkpoint-item ${cp.critical ? 'critical' : ''}">
+                <div class="cp-icon ${cp.type}">${icons[cp.type] || '🔌'}</div>
+                <div class="cp-body">
+                    <div class="cp-name">${cp.description}</div>
+                    <div class="cp-loc">📍 ${cp.location}</div>
+                    <div class="cp-instr">📸 "${cp.photo_instruction}"</div>
+                </div>
+                ${cp.critical ? '<div class="critical-badge">Kritiek</div>' : ''}
+            </div>`).join('')}
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-secondary" id="reuploadBtn">← Andere tekening</button>
+            <button class="btn btn-primary" id="startCustomerBtn">Start klantcheck →</button>
+        </div>
+    </div>`;
+}
+
+/* --- CUSTOMER --- */
+function renderCustomer() {
+    const total = state.checkpoints.length;
+    const i = state.customerStep;
+
+    if (i >= total) {
+        return `<div class="card customer-view">
+            <div class="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">Even geduld…</div>
+            </div>
+        </div>`;
+    }
+
+    const cp = state.checkpoints[i];
+    const photo = state.photos[cp.id];
+    const typeLabels = { elektra: 'Elektra', water: 'Water', afvoer: 'Afvoer', gas: 'Gas' };
+    const icons = { elektra: '⚡', water: '💧', afvoer: '🔧', gas: '🔥' };
+
+    return `
+    <div class="card customer-view">
+        <div class="progress-header">
+            <div class="progress-label">Foto ${i + 1} van ${total}</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${(i / total) * 100}%"></div>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-bottom:14px;">
+            <div class="photo-type-label">${icons[cp.type] || '🔌'} ${typeLabels[cp.type] || cp.type}</div>
+            <div class="photo-main-instr">${cp.photo_instruction}</div>
+            <div class="photo-detail">${cp.description}</div>
+        </div>
+
+        <div class="photo-upload-area ${photo ? 'has-photo' : ''}" id="photoArea">
+            ${photo
+                ? `<img src="${photo.previewUrl}" class="photo-preview" alt="Foto">`
+                : `<div class="camera-icon">📷</div>
+                   <div class="photo-upload-text">Tik om een foto te maken</div>
+                   <div class="photo-upload-hint">of kies uit je bibliotheek</div>`
+            }
+        </div>
+
+        ${state.error ? `<div class="alert alert-error" style="margin-top:14px;">⚠️ ${state.error}</div>` : ''}
+
+        <div class="btn-row" style="justify-content:space-between; margin-top:18px;">
+            ${i > 0
+                ? `<button class="btn btn-secondary" id="prevPhotoBtn">← Vorige</button>`
+                : `<div></div>`}
+            <button class="btn btn-primary" id="nextPhotoBtn" ${photo ? '' : 'disabled'}>
+                ${i === total - 1 ? 'Controleer ✓' : 'Volgende →'}
+            </button>
+        </div>
+    </div>`;
+}
+
+/* --- REPORTING --- */
+function renderReporting() {
+    const done = Object.keys(state.results).length;
+    const total = state.checkpoints.length;
+    return `
+    <div class="card">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Foto's worden geanalyseerd…</div>
+            <div class="loading-sub">${done} van ${total} gecontroleerd</div>
+        </div>
+    </div>`;
+}
+
+/* --- REPORT --- */
+function renderReport() {
+    const counts = { aanwezig: 0, twijfelachtig: 0, ontbreekt: 0 };
+    state.checkpoints.forEach(cp => {
+        const r = state.results[cp.id];
+        if (r && counts[r.status] !== undefined) counts[r.status]++;
+    });
+
+    const overall = counts.ontbreekt > 0 ? 'red' : counts.twijfelachtig > 0 ? 'orange' : 'green';
+    const overallMsg = {
+        green:  '✅ Alle aansluitpunten zijn correct — klaar voor inplannen!',
+        orange: '⚠️ Sommige punten zijn onduidelijk — bel de klant vóór je rijdt.',
+        red:    '❌ Er ontbreken aansluitpunten — nog niet inplannen voor montage.'
+    }[overall];
+    const alertType = { green: 'success', orange: 'warning', red: 'error' }[overall];
+
+    const icons = { aanwezig: '✅', twijfelachtig: '⚠️', ontbreekt: '❌' };
+
+    return `
+    <div class="card">
+        <div class="card-title">Controlerapport</div>
+
+        <div class="alert alert-${alertType}">${overallMsg}</div>
+
+        <div class="report-summary">
+            <div class="summary-card green">
+                <div class="summary-number">${counts.aanwezig}</div>
+                <div class="summary-label">Aanwezig</div>
+            </div>
+            <div class="summary-card orange">
+                <div class="summary-number">${counts.twijfelachtig}</div>
+                <div class="summary-label">Twijfelachtig</div>
+            </div>
+            <div class="summary-card red">
+                <div class="summary-number">${counts.ontbreekt}</div>
+                <div class="summary-label">Ontbreekt</div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        ${state.checkpoints.map(cp => {
+            const r = state.results[cp.id] || { status: 'twijfelachtig', explanation: 'Geen resultaat ontvangen.' };
+            const photo = state.photos[cp.id];
+            return `
+            <div class="result-item status-${r.status}">
+                <div class="result-icon">${icons[r.status] || '❓'}</div>
+                <div class="result-body">
+                    <div class="result-name">${cp.description}</div>
+                    <div class="result-expl">${r.explanation}</div>
+                </div>
+                ${photo ? `<img src="${photo.previewUrl}" class="result-photo" alt="Foto" onclick="window.open(this.src)">` : ''}
+            </div>`;
+        }).join('')}
+
+        <div class="btn-row">
+            <button class="btn btn-secondary" id="newCheckBtn">Nieuwe check</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨 Afdrukken</button>
+        </div>
+    </div>`;
+}
+
+// ============================================================
+//  HANDLERS
+// ============================================================
+function attachHandlers() {
+
+    /* Setup */
+    const apiInput = document.getElementById('apiKeyInput');
+    const setupBtn = document.getElementById('setupNextBtn');
+    if (apiInput) {
+        apiInput.addEventListener('input', () => {
+            state.apiKey = apiInput.value.trim();
+            if (setupBtn) setupBtn.disabled = !state.apiKey;
+        });
+    }
+    if (setupBtn) setupBtn.addEventListener('click', () => {
+        localStorage.setItem('kc_key', state.apiKey);
+        state.step = 'upload';
+        render();
+    });
+
+    /* Upload */
+    const zone = document.getElementById('uploadZone');
+    if (zone) {
+        zone.addEventListener('click', () => document.getElementById('drawingInput').click());
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault(); zone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) loadDrawing(e.dataTransfer.files[0]);
+        });
+    }
+
+    document.getElementById('drawingInput').onchange = e => {
+        if (e.target.files[0]) loadDrawing(e.target.files[0]);
+        e.target.value = '';
+    };
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (analyzeBtn) analyzeBtn.addEventListener('click', runAnalysis);
+
+    const backSetup = document.getElementById('backSetupBtn');
+    if (backSetup) backSetup.addEventListener('click', () => { state.step = 'setup'; render(); });
+
+    /* Review */
+    const reupload = document.getElementById('reuploadBtn');
+    if (reupload) reupload.addEventListener('click', () => { state.step = 'upload'; render(); });
+
+    const startCustomer = document.getElementById('startCustomerBtn');
+    if (startCustomer) startCustomer.addEventListener('click', () => {
+        state.customerStep = 0;
+        state.photos = {};
+        state.results = {};
+        state.error = null;
+        state.step = 'customer';
+        render();
+    });
+
+    /* Customer */
+    const photoArea = document.getElementById('photoArea');
+    if (photoArea) photoArea.addEventListener('click', () => document.getElementById('photoInput').click());
+
+    document.getElementById('photoInput').onchange = e => {
+        if (e.target.files[0]) loadPhoto(e.target.files[0]);
+        e.target.value = '';
+    };
+
+    const nextPhoto = document.getElementById('nextPhotoBtn');
+    if (nextPhoto) nextPhoto.addEventListener('click', () => {
+        state.customerStep++;
+        state.error = null;
+        if (state.customerStep >= state.checkpoints.length) {
+            runReporting();
+        } else {
+            render();
+        }
+    });
+
+    const prevPhoto = document.getElementById('prevPhotoBtn');
+    if (prevPhoto) prevPhoto.addEventListener('click', () => {
+        state.customerStep = Math.max(0, state.customerStep - 1);
+        state.error = null;
+        render();
+    });
+
+    /* Report */
+    const newCheck = document.getElementById('newCheckBtn');
+    if (newCheck) newCheck.addEventListener('click', () => {
+        state.step = 'upload';
+        state.drawing = null;
+        state.checkpoints = [];
+        state.photos = {};
+        state.results = {};
+        state.error = null;
+        render();
+    });
+}
+
+// ============================================================
+//  FILE LOADERS
+// ============================================================
+function loadDrawing(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        const [header, base64] = e.target.result.split(',');
+        const mimeType = header.match(/:(.*?);/)[1];
+        state.drawing = { base64, mimeType, filename: file.name };
+        state.error = null;
+        render();
+    };
+    reader.readAsDataURL(file);
+}
+
+function loadPhoto(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        const dataUrl = e.target.result;
+        const [header, base64] = dataUrl.split(',');
+        const mimeType = header.match(/:(.*?);/)[1];
+        const cp = state.checkpoints[state.customerStep];
+        state.photos[cp.id] = { base64, mimeType, previewUrl: dataUrl };
+        state.error = null;
+        render();
+    };
+    reader.readAsDataURL(file);
+}
+
+// ============================================================
+//  CLAUDE API
+// ============================================================
+async function claude(messages, maxTokens = 1600) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'x-api-key': state.apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: maxTokens,
+            messages
+        })
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `API fout ${res.status}`);
+    }
+    return (await res.json()).content[0].text;
+}
+
+function parseJSON(text) {
+    return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, ''));
+}
+
+// ============================================================
+//  ANALYSIS
+// ============================================================
+async function runAnalysis() {
+    state.step = 'analyzing';
+    state.error = null;
+    render();
+
+    try {
+        const text = await claude([{
+            role: 'user',
+            content: [
+                {
+                    type: 'image',
+                    source: { type: 'base64', media_type: state.drawing.mimeType, data: state.drawing.base64 }
+                },
+                {
+                    type: 'text',
+                    text: `Je bent expert in technische keukentekeningen. Analyseer deze tekening en geef een JSON array terug van ALLE aansluitpunten die vóór de montage gecontroleerd moeten worden (elektra, water, afvoer, gas).
+
+Geef ALLEEN de JSON terug, geen uitleg:
+[
+  {
+    "id": 1,
+    "type": "elektra",
+    "description": "Perilex aansluiting 7400W — inductiekookplaat",
+    "location": "Onderin de muur, midden-rechts van de keuken",
+    "photo_instruction": "Fotografeer de muur onderin rechts van het midden, op de plek van de kookplaat",
+    "critical": true
+  }
+]
+
+Regels:
+- type: elektra | water | afvoer | gas
+- critical: true voor >2000W, Perilex, hoofd watertoevoer, gas
+- photo_instruction: simpele Nederlandse zin voor een klant zonder technische kennis — beschrijf WAAr ze op moeten richten
+- Geef elk uniek aansluitpunt als apart item`
+                }
+            ]
+        }], 2000);
+
+        state.checkpoints = parseJSON(text);
+        state.step = 'review';
+    } catch (err) {
+        state.step = 'upload';
+        state.error = `Analyse mislukt: ${err.message}`;
+    }
+    render();
+}
+
+// ============================================================
+//  PHOTO REPORTING
+// ============================================================
+async function runReporting() {
+    state.step = 'reporting';
+    render();
+
+    for (const cp of state.checkpoints) {
+        const photo = state.photos[cp.id];
+        if (!photo) {
+            state.results[cp.id] = { status: 'twijfelachtig', explanation: 'Geen foto gemaakt voor dit punt.' };
+            render();
+            continue;
+        }
+
+        try {
+            const text = await claude([{
+                role: 'user',
+                content: [
+                    {
+                        type: 'image',
+                        source: { type: 'base64', media_type: photo.mimeType, data: photo.base64 }
+                    },
+                    {
+                        type: 'text',
+                        text: `Beoordeel of het volgende aansluitpunt zichtbaar en correct aanwezig is op de foto.
+
+Verwacht: ${cp.description}
+Type: ${cp.type}
+Verwachte locatie: ${cp.location}
+
+Geef ALLEEN JSON terug:
+{
+  "status": "aanwezig" | "twijfelachtig" | "ontbreekt",
+  "explanation": "Één zin uitleg in het Nederlands"
+}
+
+- aanwezig: duidelijk zichtbaar en op de juiste plek
+- twijfelachtig: mogelijk aanwezig maar onduidelijk, te ver weg, of locatie onzeker
+- ontbreekt: niet zichtbaar of aantoonbaar afwezig`
+                    }
+                ]
+            }], 300);
+
+            state.results[cp.id] = parseJSON(text);
+        } catch (err) {
+            state.results[cp.id] = { status: 'twijfelachtig', explanation: `Kon foto niet analyseren: ${err.message}` };
+        }
+        render();
+    }
+
+    state.step = 'report';
+    render();
+}
+
+// ============================================================
+//  START
+// ============================================================
+render();
+</script>
+</body>
+</html>
