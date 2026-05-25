@@ -1659,28 +1659,72 @@ const DIAG_FIELDS = {
   'Overig':        [{id:'f_w', lbl:'Breedte', ph:'300'}, {id:'f_d', lbl:'Diepte', ph:'60'}],
 };
 
+// Plattegrond-iconen per kasttype (plan view)
+function _kastPlanIcon(typeId, rx, ry, rw, rh) {
+  const cx = rx+rw/2, cy = ry+rh/2;
+  const p = Math.min(rw,rh)*0.16;
+  if (typeId==='spoelbak') {
+    const bp = Math.min(rw,rh)*0.13;
+    const sw = Math.max(0.6, Math.min(rw,rh)*0.045);
+    return `<rect x="${rx+bp}" y="${ry+bp}" width="${rw-bp*2}" height="${rh-bp*2}" fill="none" stroke="#3080C0" stroke-width="${sw}" rx="1.5"/>`
+      +`<circle cx="${cx}" cy="${cy}" r="${Math.max(1.2, Math.min(rw,rh)*0.1)}" fill="none" stroke="#3080C0" stroke-width="${sw*0.8}"/>`;
+  }
+  if (typeId==='kook') {
+    const r = Math.max(2, Math.min(rw,rh)*0.14);
+    if (rw<20||rh<20) return `<circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="none" stroke="#D07030" stroke-width="0.9"/>`;
+    const ox=rw*0.24, oy=rh*0.24;
+    return [[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx,dy])=>
+      `<circle cx="${cx+dx*ox}" cy="${cy+dy*oy}" r="${r}" fill="none" stroke="#D07030" stroke-width="0.9"/>`
+    ).join('');
+  }
+  if (typeId==='vaatwas') {
+    return `<line x1="${rx+p}" y1="${ry+rh-p}" x2="${rx+rw-p}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`
+      +`<line x1="${rx+p}" y1="${ry+rh*0.55}" x2="${rx+rw*0.55}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`;
+  }
+  if (typeId==='hoog') {
+    return (rh>rw)
+      ? `<line x1="${cx}" y1="${ry+p}" x2="${cx}" y2="${ry+rh-p}" stroke="#777" stroke-width="0.9"/>`
+      : `<line x1="${rx+p}" y1="${cy}" x2="${rx+rw-p}" y2="${cy}" stroke="#777" stroke-width="0.9"/>`;
+  }
+  return '';
+}
+
 // SVG kastelementen — proportionele segmenten per wand
 function _wallSegs(wall, x0, y0, lenPx, depPx, vertical) {
   lenPx = Math.max(1, lenPx);
   depPx = Math.max(1, depPx);
+
+  // Achterwand: dikke lijn
+  const wallLine = vertical
+    ? `<line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0+lenPx}" stroke="#555" stroke-width="3" stroke-linecap="square"/>`
+    : `<line x1="${x0}" y1="${y0}" x2="${x0+lenPx}" y2="${y0}" stroke="#555" stroke-width="3" stroke-linecap="square"/>`;
+
+  // Aanrechtblad: lijn aan voorkant, iets uitspringend
+  const ov = 1.5;
+  const ctLine = vertical
+    ? `<line x1="${x0+depPx+ov}" y1="${y0}" x2="${x0+depPx+ov}" y2="${y0+lenPx}" stroke="#C8A070" stroke-width="2.5" stroke-linecap="square"/>`
+    : `<line x1="${x0}" y1="${y0+depPx+ov}" x2="${x0+lenPx}" y2="${y0+depPx+ov}" stroke="#C8A070" stroke-width="2.5" stroke-linecap="square"/>`;
+
   const segs = (kastData||{})[wall];
+  let cabSvg;
   if (!segs || !segs.length) {
-    return `<rect x="${x0}" y="${y0}" width="${vertical?depPx:lenPx}" height="${vertical?lenPx:depPx}" fill="#EEF0E8" stroke="none"/>`;
+    cabSvg = `<rect x="${x0}" y="${y0}" width="${vertical?depPx:lenPx}" height="${vertical?lenPx:depPx}" fill="#EEF0E8" stroke="none"/>`;
+  } else {
+    const totCm = segs.reduce((s,k) => s + (k.breedte||60), 0) || 1;
+    let off = 0;
+    cabSvg = segs.map((k, i) => {
+      const segPx = (k.breedte / totCm) * lenPx;
+      const kt = KAST.find(t => t.id === k.type) || KAST[0];
+      const rx = vertical ? x0 : x0+off, ry = vertical ? y0+off : y0;
+      const rw = vertical ? depPx : segPx, rh = vertical ? segPx : depPx;
+      off += segPx;
+      return `<g onclick="cycleKast('${wall}',${i})" style="cursor:pointer" title="${kt.lbl}">
+        <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${kt.col}" stroke="${kt.brd}" stroke-width="0.5" rx="0.5"/>
+        ${_kastPlanIcon(kt.id, rx, ry, rw, rh)}
+      </g>`;
+    }).join('');
   }
-  const totCm = segs.reduce((s,k) => s + (k.breedte||60), 0) || 1;
-  let off = 0;
-  return segs.map((k, i) => {
-    const segPx = (k.breedte / totCm) * lenPx;
-    const kt = KAST.find(t => t.id === k.type) || KAST[0];
-    const rx = vertical ? x0 : x0 + off, ry = vertical ? y0 + off : y0;
-    const rw = vertical ? depPx : segPx, rh = vertical ? segPx : depPx;
-    const fs = Math.max(7, Math.min(12, Math.min(rw, rh) * 0.38));
-    off += segPx;
-    return `<g onclick="cycleKast('${wall}',${i})" style="cursor:pointer" title="${kt.lbl}">
-      <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${kt.col}" stroke="${kt.brd}" stroke-width="0.7" rx="1"/>
-      ${kt.icon ? `<text x="${rx+rw/2}" y="${ry+rh/2+fs*0.38}" text-anchor="middle" font-size="${fs}" fill="${kt.brd}">${kt.icon}</text>` : ''}
-    </g>`;
-  }).join('');
+  return wallLine + cabSvg + ctLine;
 }
 
 // Proportionele SVG per keukentype
@@ -1695,7 +1739,7 @@ function keukenSVG(type, dims, kData) {
       const VW=M+w+50, VH=M+d+42;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wand1',M,M,w,d,false)}
-        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#444" stroke-width="2" rx="2"/>
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
         ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
       </svg>`;
@@ -1707,7 +1751,7 @@ function keukenSVG(type, dims, kData) {
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:260px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wand1',M,M+w2-d,w1,d,false)}
         ${_wallSegs('wand2',M,M,d,w2-d,true)}
-        <polygon points="${M},${M} ${M+d},${M} ${M+d},${M+w2-d} ${M+w1},${M+w2-d} ${M+w1},${M+w2} ${M},${M+w2}" fill="none" stroke="#444" stroke-width="2"/>
+        <polygon points="${M},${M} ${M+d},${M} ${M+d},${M+w2-d} ${M+w1},${M+w2-d} ${M+w1},${M+w2} ${M},${M+w2}" fill="none" stroke="#CCC" stroke-width="0.7"/>
         ${_eh(M,M+w2,VH-10)} ${_eh(M+w1,M+w2,VH-10)} ${_hd(M,M+w1,VH-12,n('f_wand1'))}
         ${_ev(M,Math.max(1,M-22),M-1)} ${_ev(M+w2,Math.max(1,M-22),M-1)} ${_vd(M,M+w2,Math.max(1,M-24),n('f_wand2'))}
         ${_ev(M+w2-d,M+w1+10,M+w1+36)} ${_ev(M+w2,M+w1+10,M+w1+36)} ${_vd(M+w2-d,M+w2,M+w1+24,n('f_d'))}
@@ -1721,7 +1765,7 @@ function keukenSVG(type, dims, kData) {
         ${_wallSegs('wa',M,M,wa,d,false)}
         ${_wallSegs('wl',M,M+d,d,wl-d,true)}
         ${_wallSegs('wr',M+wa-d,M+d,d,wr-d,true)}
-        <polygon points="${M},${M} ${M+wa},${M} ${M+wa},${M+wr} ${M+wa-d},${M+wr} ${M+wa-d},${M+d} ${M+d},${M+d} ${M+d},${M+wl} ${M},${M+wl}" fill="none" stroke="#444" stroke-width="2"/>
+        <polygon points="${M},${M} ${M+wa},${M} ${M+wa},${M+wr} ${M+wa-d},${M+wr} ${M+wa-d},${M+d} ${M+d},${M+d} ${M+d},${M+wl} ${M},${M+wl}" fill="none" stroke="#CCC" stroke-width="0.7"/>
         ${_eh(M,M,Math.max(1,M-22))} ${_eh(M+wa,M,Math.max(1,M-22))} ${_hd(M,M+wa,Math.max(4,M-25),n('f_wa'))}
         ${_ev(M,Math.max(1,M-22),M-1)} ${_ev(M+wl,Math.max(1,M-22),M-1)} ${_vd(M,M+wl,Math.max(1,M-24),n('f_wl'))}
         ${_ev(M,M+wa+10,M+wa+36)} ${_ev(M+wr,M+wa+10,M+wa+36)} ${_vd(M,M+wr,M+wa+24,n('f_wr'))}
@@ -1733,9 +1777,9 @@ function keukenSVG(type, dims, kData) {
       const VW=M+w+24, VH=M+totH*s+38, ex=M+(w-ebr)/2;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wand1',M,M,w,d,false)}
-        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#444" stroke-width="2" rx="2"/>
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_wallSegs('eiland',ex,M+d+gang,ebr,ed,false)}
-        <rect x="${ex}" y="${M+d+gang}" width="${ebr}" height="${ed}" fill="none" stroke="#444" stroke-width="2" rx="2"/>
+        <rect x="${ex}" y="${M+d+gang}" width="${ebr}" height="${ed}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_eh(M,M+totH*s,VH-10)} ${_eh(M+w,M+totH*s,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
         <line x1="${M+w+8}" y1="${M+d}" x2="${M+w+8}" y2="${M+d+gang}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>
         <rect x="${M+w+11}" y="${M+d+gang/2-6}" width="28" height="12" fill="white"/>
@@ -1748,9 +1792,9 @@ function keukenSVG(type, dims, kData) {
       const VW=M+w+50, VH=M+totH*s+36;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
         ${_wallSegs('wand1',M,M,w,d1,false)}
-        <rect x="${M}" y="${M}" width="${w}" height="${d1}" fill="none" stroke="#444" stroke-width="2" rx="2"/>
+        <rect x="${M}" y="${M}" width="${w}" height="${d1}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_wallSegs('wand2',M,M+d1+gang,w,d2,false)}
-        <rect x="${M}" y="${M+d1+gang}" width="${w}" height="${d2}" fill="none" stroke="#444" stroke-width="2" rx="2"/>
+        <rect x="${M}" y="${M+d1+gang}" width="${w}" height="${d2}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_eh(M,M,VH-10)} ${_eh(M+w,M,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
         ${_ev(M+d1,M+w+10,M+w+36)} ${_ev(M+d1+gang,M+w+10,M+w+36)} ${_vd(M+d1,M+d1+gang,M+w+24,n('f_gang'))}
       </svg>`;
@@ -1759,7 +1803,8 @@ function keukenSVG(type, dims, kData) {
       const W=n('f_w')||300, D=n('f_d')||60, s=Math.min(MW/W,MH/D), w=W*s, d=D*s;
       const VW=M+w+50, VH=M+d+42;
       return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
-        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="2" rx="2" stroke-dasharray="6,3"/>
+        ${_wallSegs('wand1',M,M,w,d,false)}
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
         ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
         ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
       </svg>`;
