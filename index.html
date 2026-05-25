@@ -365,12 +365,13 @@ async function router() {
   const main = document.createElement('main');
   app.appendChild(main);
 
-  if (route === '')            await pageHome(main);
-  else if (route === 'k')      await pageDetail(main, param);
+  if (route === '')               await pageHome(main);
+  else if (route === 'k')         await pageDetail(main, param);
   else if (route === 'aanbieden') await pageAanbieden(main);
-  else if (route === 'login')  await pageLogin(main);
-  else if (route === 'mijn')   await pageMijn(main);
-  else                         await pageHome(main);
+  else if (route === 'login')     await pageLogin(main);
+  else if (route === 'mijn')      await pageMijn(main);
+  else if (route === 'monteur')   await pageMonteur(main);
+  else                            await pageHome(main);
 }
 
 const go = p => location.hash = '#' + p;
@@ -380,11 +381,15 @@ window.addEventListener('DOMContentLoaded', router);
 // ── NAV ───────────────────────────────────────────────────
 function navHTML() {
   const init = profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '';
+  const isMonteur = profile?.role === 'monteur';
   return `<nav>
     <div class="logo" onclick="go('')">Kitch<span>Kitch</span></div>
     <div class="nav-right">
       ${user ? `
-        <button class="btn btn-primary" onclick="go('aanbieden')">+ Aanbieden</button>
+        ${isMonteur
+          ? `<button class="btn btn-ghost" onclick="go('monteur')">🔧 Mijn klussen</button>`
+          : `<button class="btn btn-primary" onclick="go('aanbieden')">+ Aanbieden</button>`
+        }
         <div class="nav-avatar" onclick="go('mijn')" title="Mijn account">${init}</div>
       ` : `
         <button class="btn btn-ghost" onclick="go('login')">Inloggen</button>
@@ -466,6 +471,13 @@ async function pageDetail(el, id) {
     .eq('id', id)
     .single();
 
+  const { data: offertes } = await db
+    .from('offertes')
+    .select('*, profiles(name, regio, richtprijs)')
+    .eq('listing_id', id)
+    .order('prijs', { ascending: true })
+    .limit(3);
+
   if (error || !l) { el.innerHTML = `<div class="page">${err('Keuken niet gevonden.')}</div>`; return; }
 
   const photos = sort(l.listing_photos);
@@ -529,6 +541,29 @@ async function pageDetail(el, id) {
               <div class="seller-role">Aanbieder</div>
             </div>
           </div>
+
+          <div class="divider"></div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px">🔧 Monteurs in de buurt</div>
+          ${offertes?.length ? `
+            ${offertes.map((o, i) => `
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:${i===0?'#F0FFF4':'var(--gray-1)'};margin-bottom:8px;border:1.5px solid ${i===0?'#86efac':'transparent'}">
+                <div style="font-size:18px;margin-top:1px">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:700">${esc(o.profiles?.name || 'Monteur')}</div>
+                  ${o.profiles?.regio ? `<div style="font-size:11px;color:var(--gray-4)">📍 ${esc(o.profiles.regio)}</div>` : ''}
+                  ${o.voorbehouden ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px;font-style:italic">⚠️ ${esc(o.voorbehouden)}</div>` : ''}
+                </div>
+                <div style="font-size:15px;font-weight:800;color:${i===0?'#16a34a':'var(--black)'}">€${o.prijs.toLocaleString('nl')}</div>
+              </div>`).join('')}
+            <div style="background:var(--gray-1);border-radius:10px;padding:12px 14px;margin-top:4px">
+              <div style="font-size:12px;color:var(--gray-4);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Totaal incl. beste monteur</div>
+              <div style="font-size:22px;font-weight:800;margin-top:2px">€${(l.price + offertes[0].prijs).toLocaleString('nl')}</div>
+            </div>
+          ` : `
+            <div style="font-size:13px;color:var(--gray-4);padding:12px;background:var(--gray-1);border-radius:10px">
+              Nog geen monteurs beschikbaar in deze regio. Binnenkort meer aanbod.
+            </div>
+          `}
         </div>
       </div>
     </div>
@@ -783,6 +818,23 @@ async function pageMijn(el) {
           <input id="p_email" class="fi" type="email" placeholder="jij@email.nl" value="${esc(profile?.contact_email || '')}">
         </div>
       </div>
+      ${profile?.role === 'monteur' ? `
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px">🔧 Monteursprofiel</div>
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Werkgebied</label>
+          <input id="p_regio" class="fi" placeholder="Bijv: Noord-Holland, Utrecht" value="${esc(profile?.regio || '')}">
+        </div>
+        <div class="fg">
+          <label class="fl">Richtprijs plaatsing (€)</label>
+          <input id="p_richtprijs" class="fi" type="number" placeholder="450" value="${profile?.richtprijs || ''}">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Korte omschrijving</label>
+        <textarea id="p_bio" class="ft" style="min-height:70px" placeholder="Bijv: 10 jaar ervaring, inclusief demontage en transport">${esc(profile?.bio || '')}</textarea>
+      </div>` : ''}
       <button class="btn btn-primary" onclick="saveProfile()">Opslaan</button>
     </div>
 
@@ -815,10 +867,14 @@ async function pageMijn(el) {
 window.saveProfile = async () => {
   const phone = document.getElementById('p_phone')?.value?.trim() || null;
   const contact_email = document.getElementById('p_email')?.value?.trim() || null;
+  const regio = document.getElementById('p_regio')?.value?.trim() || null;
+  const richtprijs = parseInt(document.getElementById('p_richtprijs')?.value) || null;
+  const bio = document.getElementById('p_bio')?.value?.trim() || null;
   const al = document.getElementById('profile-alert');
-  const { error } = await db.from('profiles').update({ phone, contact_email }).eq('id', user.id);
+  const updates = { phone, contact_email, regio, richtprijs, bio };
+  const { error } = await db.from('profiles').update(updates).eq('id', user.id);
   if (error) { al.innerHTML = `<div class="alert alert-err">⚠️ ${error.message}</div>`; return; }
-  profile = { ...profile, phone, contact_email };
+  profile = { ...profile, ...updates };
   al.innerHTML = `<div class="alert alert-ok">✅ Opgeslagen!</div>`;
   setTimeout(() => { al.innerHTML = ''; }, 3000);
 };
@@ -832,6 +888,104 @@ window.delListing = async id => {
   if (!confirm('Weet je zeker dat je deze advertentie wilt verwijderen?')) return;
   await db.from('listings').delete().eq('id', id);
   go('mijn');
+};
+
+// ── MONTEUR ───────────────────────────────────────────────
+async function pageMonteur(el) {
+  if (!user) { go('login'); return; }
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data: listings } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false });
+
+  const { data: mijnOffertes } = await db
+    .from('offertes')
+    .select('listing_id, prijs')
+    .eq('monteur_id', user.id);
+
+  const offertesMap = {};
+  (mijnOffertes || []).forEach(o => offertesMap[o.listing_id] = o.prijs);
+
+  el.innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h1 style="font-size:22px;font-weight:800">Beschikbare keukens</h1>
+    </div>
+    <p style="font-size:14px;color:var(--gray-4);margin-bottom:24px">Geef een offerte op keukens die je wilt plaatsen. Kopers zien jouw prijs direct op de advertentiepagina.</p>
+
+    ${!listings?.length ? `<div class="empty">
+      <div class="empty-icon">🍳</div>
+      <div class="empty-title">Nog geen keukens</div>
+    </div>` : listings.map(l => {
+      const img = sort(l.listing_photos)[0]?.url;
+      const heeftOfferte = offertesMap[l.id] !== undefined;
+      return `<div class="my-item">
+        <div class="my-thumb" style="cursor:pointer" onclick="go('k/${l.id}')">${img ? `<img src="${img}" alt="">` : '🍳'}</div>
+        <div class="my-body">
+          <div class="my-title" style="cursor:pointer" onclick="go('k/${l.id}')">${esc(l.title)}</div>
+          <div class="my-meta">€${l.price.toLocaleString('nl')} · 📍 ${esc(l.city || '')}${l.width_cm ? ` · ${l.width_cm}cm breed` : ''}</div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${heeftOfferte
+              ? `<span style="font-size:13px;font-weight:700;color:#16a34a">✅ Jouw offerte: €${offertesMap[l.id].toLocaleString('nl')}</span>
+                 <button class="btn btn-ghost btn-sm" onclick="openOfferte('${l.id}', ${offertesMap[l.id]})">Wijzigen</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="openOfferte('${l.id}', null)">+ Offerte geven</button>`
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Offerte modal -->
+  <div id="offerteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+      <h3 style="font-size:18px;font-weight:800;margin-bottom:6px">Offerte geven</h3>
+      <p style="font-size:13px;color:var(--gray-4);margin-bottom:20px">Je prijs is zichtbaar voor de koper. Voeg voorbehouden toe als je nog niet zeker bent.</p>
+      <div id="om-alert"></div>
+      <div class="fg"><label class="fl">Jouw prijs (€)</label>
+        <input id="om_prijs" class="fi" type="number" placeholder="450"></div>
+      <div class="fg"><label class="fl">Voorbehouden <span style="font-weight:400;text-transform:none;letter-spacing:0">(optioneel)</span></label>
+        <textarea id="om_vb" class="ft" style="min-height:70px" placeholder="Bijv: mits keuken compleet is en aansluitingen kloppen. Voorinspectie mogelijk voor €75."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeOfferte()">Annuleren</button>
+        <button class="btn btn-primary" style="flex:2" onclick="submitOfferte()">Offerte plaatsen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let activeListing = null;
+window.openOfferte = (listingId, huidigePrijs) => {
+  activeListing = listingId;
+  document.getElementById('om_prijs').value = huidigePrijs || '';
+  document.getElementById('om_vb').value = '';
+  document.getElementById('om-alert').innerHTML = '';
+  const modal = document.getElementById('offerteModal');
+  modal.style.display = 'flex';
+};
+window.closeOfferte = () => {
+  document.getElementById('offerteModal').style.display = 'none';
+  activeListing = null;
+};
+window.submitOfferte = async () => {
+  const prijs = parseInt(document.getElementById('om_prijs').value);
+  const voorbehouden = document.getElementById('om_vb').value.trim() || null;
+  const al = document.getElementById('om-alert');
+  if (!prijs || prijs < 1) { al.innerHTML = err('Vul een geldige prijs in.'); return; }
+
+  const { error } = await db.from('offertes').upsert({
+    listing_id: activeListing,
+    monteur_id: user.id,
+    prijs,
+    voorbehouden
+  }, { onConflict: 'listing_id,monteur_id' });
+
+  if (error) { al.innerHTML = err(error.message); return; }
+  closeOfferte();
+  pageMonteur(document.querySelector('main'));
 };
 
 // ── HELPERS ───────────────────────────────────────────────
