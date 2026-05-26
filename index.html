@@ -638,7 +638,12 @@ async function pageDetail(el, id) {
     fields.forEach(f => {
       if (afmJson[f.id]) maatRegels.push({ l: f.lbl, v: afmJson[f.id] + ' cm' });
     });
-    if (afmJson.hoogte) maatRegels.push({ l: 'Hoogte', v: afmJson.hoogte + ' cm' });
+    if (afmJson.hoogte)      maatRegels.push({ l: 'Hoogte hoogste kast', v: afmJson.hoogte + ' cm' });
+    if (afmJson.blad_l)      maatRegels.push({ l: 'Lengte aanrechtblad', v: afmJson.blad_l + ' cm' });
+    if (afmJson.blad_d)      maatRegels.push({ l: 'Diepte aanrechtblad', v: afmJson.blad_d + ' cm' });
+    if (afmJson.onderkasten) maatRegels.push({ l: 'Onderkasten',         v: afmJson.onderkasten });
+    if (afmJson.hoogkasten)  maatRegels.push({ l: 'Hoge kasten',         v: afmJson.hoogkasten });
+    if (afmJson.bovenkasten) maatRegels.push({ l: 'Bovenkasten',         v: afmJson.bovenkasten });
   } else {
     if (l.width_cm)  maatRegels.push({ l: 'Breedte', v: l.width_cm  + ' cm' });
     if (l.depth_cm)  maatRegels.push({ l: 'Diepte',  v: l.depth_cm  + ' cm' });
@@ -868,10 +873,35 @@ async function pageAanbieden(el) {
     <div class="form-card" id="afm-card">
       <div class="form-card-title">📐 Afmetingen</div>
       <div id="afm-wrap"><!-- wordt gevuld door renderAfmetingen() --></div>
-      <div class="fg" style="max-width:210px;margin-top:16px">
-        <label class="fl">Hoogte kasten (cm)</label>
-        <input id="f_h" class="fi" type="number" placeholder="210" min="0">
-        <div style="font-size:11px;color:var(--gray-4);margin-top:4px">normaal 210–220 cm</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:16px">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Hoogte hoogste kast (cm)</label>
+          <input id="f_h" class="fi" type="number" placeholder="210" min="0">
+          <div style="font-size:11px;color:var(--gray-4);margin-top:3px">normaal 210–220 cm</div>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Lengte aanrechtblad (cm)</label>
+          <input id="f_blad_l" class="fi" type="number" placeholder="300" min="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Diepte aanrechtblad (cm)</label>
+          <input id="f_blad_d" class="fi" type="number" placeholder="60" min="0">
+          <div style="font-size:11px;color:var(--gray-4);margin-top:3px">normaal 58–62 cm</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px;margin-top:14px">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Onderkasten</label>
+          <input id="f_onderkasten" class="fi" type="number" placeholder="8" min="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Hoge kasten</label>
+          <input id="f_hoogkasten" class="fi" type="number" placeholder="2" min="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Bovenkasten</label>
+          <input id="f_bovenkasten" class="fi" type="number" placeholder="6" min="0">
+        </div>
       </div>
     </div>
 
@@ -1102,7 +1132,12 @@ window.submitListing = async () => {
   const afmCfg = DIAG_FIELDS[afmType] || DIAG_FIELDS['Rechte keuken'];
   const afmData = { type: afmType };
   afmCfg.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
-  afmData.hoogte = parseInt(v('f_h')) || null;
+  afmData.hoogte      = parseInt(v('f_h'))          || null;
+  afmData.blad_l      = parseInt(v('f_blad_l'))     || null;
+  afmData.blad_d      = parseInt(v('f_blad_d'))     || null;
+  afmData.onderkasten = parseInt(v('f_onderkasten')) || null;
+  afmData.hoogkasten  = parseInt(v('f_hoogkasten'))  || null;
+  afmData.bovenkasten = parseInt(v('f_bovenkasten')) || null;
   const mainBr = afmData.f_w || afmData.f_wand1 || afmData.f_wa || null;
   const mainD  = afmData.f_d || null;
 
