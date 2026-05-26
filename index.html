@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KitchKitch — Tweedehands keukens</title>
+  <title>KitchKatch — Tweedehands keukens</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -407,10 +407,42 @@
       background: white; color: var(--black); border: 1.5px solid var(--black);
     }
 
+    /* UITLEG SECTIE */
+    .uitleg {
+      border-top: 2px solid var(--black); background: white;
+      padding: 72px 24px;
+    }
+    .uitleg-inner { max-width: 1100px; margin: 0 auto; }
+    .uitleg-heading {
+      font-size: clamp(24px, 3.5vw, 40px); font-weight: 900;
+      letter-spacing: -1.5px; margin-bottom: 48px; line-height: 1.1;
+    }
+    .uitleg-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;
+    }
+    .uitleg-card {
+      border: 2px solid var(--black); border-radius: var(--r-md);
+      padding: 28px; box-shadow: var(--sh-sm); background: white;
+    }
+    .uitleg-card-accent { background: var(--accent-light); }
+    .uitleg-icon { font-size: 36px; margin-bottom: 16px; }
+    .uitleg-card-title { font-size: 18px; font-weight: 900; margin-bottom: 10px; letter-spacing: -0.3px; }
+    .uitleg-card-text { font-size: 14px; color: var(--gray-5); line-height: 1.7; }
+    .uitleg-note {
+      margin-top: 40px; padding: 24px 28px;
+      border: 2px solid var(--black); border-radius: var(--r-md);
+      background: #FFFBF0; box-shadow: var(--sh-sm);
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .uitleg-note-icon { font-size: 28px; flex-shrink: 0; }
+    .uitleg-note-text { font-size: 14px; line-height: 1.7; color: var(--gray-5); }
+    .uitleg-note-text strong { color: var(--black); font-weight: 800; }
+
     @media (max-width: 768px) {
       .detail-grid { grid-template-columns: 1fr; }
       .sticky-card { position: static; }
       .stats-bar { gap: 24px; }
+      .uitleg-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 540px) {
       nav { padding: 0 16px; }
@@ -486,6 +518,7 @@ async function router() {
   app.appendChild(main);
 
   if (route === '')               await pageHome(main);
+  else if (route === 'keukens')   await pageKeukens(main);
   else if (route === 'k')         await pageDetail(main, param);
   else if (route === 'aanbieden') await pageAanbieden(main);
   else if (route === 'login')     await pageLogin(main);
@@ -504,7 +537,7 @@ function navHTML() {
   const init = profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '';
   const isMonteur = profile?.role === 'monteur';
   return `<nav>
-    <div class="logo" onclick="go('')">Kitch<span>Kitch</span></div>
+    <div class="logo" onclick="go('')">Kitch<span>Katch</span></div>
     <div class="nav-right">
       ${user ? `
         ${isMonteur
@@ -538,52 +571,116 @@ async function pageHome(el) {
     .from('listings')
     .select('*, listing_photos(url, order_index)')
     .eq('status', 'actief')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(3);
 
   const ls = document.getElementById('ls');
-
   if (error) { ls.innerHTML = err(error.message); return; }
 
-  if (!data?.length) {
-    ls.innerHTML = `<div class="listings-grid"><div class="empty">
-      <div class="empty-icon">🍳</div>
-      <div class="empty-title">Nog geen keukens</div>
-      <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
-    </div></div>`;
-    return;
-  }
+  const listingsHTML = !data?.length
+    ? `<div class="listings-grid"><div class="empty">
+        <div class="empty-icon">🍳</div>
+        <div class="empty-title">Nog geen keukens</div>
+        <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
+      </div></div>`
+    : `<div class="listings-grid">${data.map(l => listingCardHTML(l)).join('')}</div>
+       <div style="text-align:center;margin-top:32px">
+         <button class="hero-btn hero-btn-outline" onclick="go('keukens')">Bekijk alle keukens →</button>
+       </div>`;
 
   ls.innerHTML = `
     <div class="section-header">
-      <div class="section-title">Beschikbare keukens</div>
+      <div class="section-title">Recent aangeboden</div>
+    </div>
+    ${listingsHTML}`;
+
+  // Uitleg sectie
+  ls.insertAdjacentHTML('afterend', `
+    <div class="uitleg">
+      <div class="uitleg-inner">
+        <div class="uitleg-heading">Hoe werkt KitchKatch?</div>
+        <div class="uitleg-grid">
+          <div class="uitleg-card uitleg-card-accent">
+            <div class="uitleg-icon">💰</div>
+            <div class="uitleg-card-title">Tot 70% goedkoper</div>
+            <div class="uitleg-card-text">Een tweedehands keuken kost een fractie van nieuw. Keukens van goede merken gaan tientallen jaren mee — zonde om ze weg te gooien als je verhuist of verbouwt.</div>
+          </div>
+          <div class="uitleg-card">
+            <div class="uitleg-icon">🔧</div>
+            <div class="uitleg-card-title">Installatie is maatwerk</div>
+            <div class="uitleg-card-text">Een tweedehands keuken plaatsen is complexer dan een nieuwe. De maten kloppen zelden precies, aansluitingen liggen anders, en demonteren vereist vakmanschap. Reken op meer installatiewerk dan bij een nieuwe keuken.</div>
+          </div>
+          <div class="uitleg-card">
+            <div class="uitleg-icon">👷</div>
+            <div class="uitleg-card-title">Wij regelen de monteur</div>
+            <div class="uitleg-card-text">Via KitchKatch vind je gespecialiseerde monteurs die ervaring hebben met tweedehands keukens. Zij geven een offerte op maat — zodat je vooraf weet waar je aan toe bent.</div>
+          </div>
+        </div>
+        <div class="uitleg-note">
+          <div class="uitleg-note-icon">💡</div>
+          <div class="uitleg-note-text">
+            <strong>Eerlijk advies:</strong> de keuken zelf is goedkoper, maar de installatie kan duurder uitvallen dan bij een nieuwe keuken. Per saldo ben je bij een goede keuken nog steeds fors goedkoper uit — maar reken altijd beide kosten door voordat je beslist.
+          </div>
+        </div>
+      </div>
+    </div>`);
+}
+
+// ── ALLE KEUKENS ──────────────────────────────────────────
+async function pageKeukens(el) {
+  el.innerHTML = `<div class="page"><div class="spin-wrap"><div class="spin"></div></div></div>`;
+
+  const { data, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false });
+
+  const wrap = el.querySelector('.page');
+  if (error) { wrap.innerHTML = err(error.message); return; }
+
+  if (!data?.length) {
+    wrap.innerHTML = `<button class="back" onclick="go('')">← Terug</button>
+      <div class="listings-grid"><div class="empty">
+        <div class="empty-icon">🍳</div>
+        <div class="empty-title">Nog geen keukens</div>
+        <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
+      </div></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <button class="back" onclick="go('')">← Terug</button>
+    <div class="section-header">
+      <div class="section-title">Alle keukens</div>
       <div class="section-count">${data.length} keuken${data.length !== 1 ? 's' : ''}</div>
     </div>
-    <div class="listings-grid">
-      ${data.map(l => {
-        const photos = sort(l.listing_photos);
-        const img = photos[0]?.url;
-        const tags = [l.keuken_type, l.conditie].filter(Boolean);
-        return `<div class="listing-card" onclick="go('k/${l.id}')">
-          <div class="listing-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '🍳'}</div>
-          <div class="listing-body">
-            <div class="listing-title">${esc(l.title)}</div>
-            <div class="listing-brand">${esc(l.brand || '')}${l.color ? ' · ' + esc(l.color) : ''}</div>
-            ${tags.length ? `<div class="listing-dims">
-              ${tags.map(t => `<span class="dim-tag">${esc(t)}</span>`).join('')}
-              ${l.width_cm ? `<span class="dim-tag">↔ ${l.width_cm}cm</span>` : ''}
-            </div>` : l.width_cm ? `<div class="listing-dims">
-              <span class="dim-tag">↔ ${l.width_cm}cm</span>
-              ${l.depth_cm ? `<span class="dim-tag">↕ ${l.depth_cm}cm</span>` : ''}
-              ${l.height_cm ? `<span class="dim-tag">↑ ${l.height_cm}cm</span>` : ''}
-            </div>` : '<div style="height:26px"></div>'}
-            <div class="listing-footer">
-              <div class="listing-price">€${l.price.toLocaleString('nl')}</div>
-              <div class="listing-city">📍 ${esc(l.city || '')}</div>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+    <div class="listings-grid">${data.map(l => listingCardHTML(l)).join('')}</div>`;
+}
+
+// ── LISTING CARD HTML (gedeeld) ───────────────────────────
+function listingCardHTML(l) {
+  const photos = sort(l.listing_photos);
+  const img = photos[0]?.url;
+  const tags = [l.keuken_type, l.conditie].filter(Boolean);
+  return `<div class="listing-card" onclick="go('k/${l.id}')">
+    <div class="listing-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '🍳'}</div>
+    <div class="listing-body">
+      <div class="listing-title">${esc(l.title)}</div>
+      <div class="listing-brand">${esc(l.brand || '')}${l.color ? ' · ' + esc(l.color) : ''}</div>
+      ${tags.length ? `<div class="listing-dims">
+        ${tags.map(t => `<span class="dim-tag">${esc(t)}</span>`).join('')}
+        ${l.width_cm ? `<span class="dim-tag">↔ ${l.width_cm}cm</span>` : ''}
+      </div>` : l.width_cm ? `<div class="listing-dims">
+        <span class="dim-tag">↔ ${l.width_cm}cm</span>
+        ${l.height_cm ? `<span class="dim-tag">↑ ${l.height_cm}cm</span>` : ''}
+      </div>` : '<div style="height:26px"></div>'}
+      <div class="listing-footer">
+        <div class="listing-price">€${l.price.toLocaleString('nl')}</div>
+        <div class="listing-city">📍 ${esc(l.city || '')}</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ── DETAIL ────────────────────────────────────────────────
