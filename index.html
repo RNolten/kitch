@@ -438,11 +438,32 @@
     .uitleg-note-text { font-size: 14px; line-height: 1.7; color: var(--gray-5); }
     .uitleg-note-text strong { color: var(--black); font-weight: 800; }
 
+    /* CTA SPLIT */
+    .cta-split {
+      border-top: 2px solid var(--black); background: var(--gray-1);
+      padding: 72px 24px;
+    }
+    .cta-split-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    .cta-split-card {
+      border: 2px solid var(--black); border-radius: var(--r-md);
+      padding: 36px; box-shadow: var(--sh-sm);
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .cta-split-seller { background: var(--accent-light); }
+    .cta-split-buyer { background: white; }
+    .cta-split-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-4); }
+    .cta-split-title { font-size: 28px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.1; }
+    .cta-split-text { font-size: 14px; color: var(--gray-5); line-height: 1.7; flex: 1; }
+
     @media (max-width: 768px) {
       .detail-grid { grid-template-columns: 1fr; }
       .sticky-card { position: static; }
       .stats-bar { gap: 24px; }
       .uitleg-grid { grid-template-columns: 1fr; }
+      .cta-split-inner { grid-template-columns: 1fr; }
     }
     @media (max-width: 540px) {
       nav { padding: 0 16px; }
@@ -565,37 +586,7 @@ async function pageHome(el) {
         <button class="hero-btn hero-btn-outline" onclick="document.getElementById('ls').scrollIntoView({behavior:'smooth'})">Bekijk keukens ↓</button>
       </div>
     </div>
-    <div id="ls" class="page"><div class="spin-wrap"><div class="spin"></div></div></div>`;
-
-  const { data, error } = await db
-    .from('listings')
-    .select('*, listing_photos(url, order_index)')
-    .eq('status', 'actief')
-    .order('created_at', { ascending: false })
-    .limit(3);
-
-  const ls = document.getElementById('ls');
-  if (error) { ls.innerHTML = err(error.message); return; }
-
-  const listingsHTML = !data?.length
-    ? `<div class="listings-grid"><div class="empty">
-        <div class="empty-icon">🍳</div>
-        <div class="empty-title">Nog geen keukens</div>
-        <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
-      </div></div>`
-    : `<div class="listings-grid">${data.map(l => listingCardHTML(l)).join('')}</div>
-       <div style="text-align:center;margin-top:32px">
-         <button class="hero-btn hero-btn-outline" onclick="go('keukens')">Bekijk alle keukens →</button>
-       </div>`;
-
-  ls.innerHTML = `
-    <div class="section-header">
-      <div class="section-title">Recent aangeboden</div>
-    </div>
-    ${listingsHTML}`;
-
-  // Uitleg sectie
-  ls.insertAdjacentHTML('afterend', `
+    <div id="ls" class="page"><div class="spin-wrap"><div class="spin"></div></div></div>
     <div class="uitleg">
       <div class="uitleg-inner">
         <div class="uitleg-heading">Hoe werkt KitchKatch?</div>
@@ -623,7 +614,50 @@ async function pageHome(el) {
           </div>
         </div>
       </div>
-    </div>`);
+    </div>
+    <div class="cta-split">
+      <div class="cta-split-inner">
+        <div class="cta-split-card cta-split-seller">
+          <div class="cta-split-label">Keuken over?</div>
+          <div class="cta-split-title">Zet hem te koop</div>
+          <div class="cta-split-text">Gratis advertentie plaatsen. Duizenden mensen op zoek naar een betaalbare keuken vinden jouw aanbod.</div>
+          <button class="hero-btn hero-btn-primary" onclick="go('aanbieden')">Keuken aanbieden →</button>
+        </div>
+        <div class="cta-split-card cta-split-buyer">
+          <div class="cta-split-label">Op zoek naar een keuken?</div>
+          <div class="cta-split-title">Bekijk het aanbod</div>
+          <div class="cta-split-text">Kwalitatieve keukens van particulieren en aannemers. Compleet met foto's, maten en mogelijkheid tot plaatsing.</div>
+          <button class="hero-btn hero-btn-outline" onclick="go('keukens')">Bekijk alle keukens →</button>
+        </div>
+      </div>
+    </div>`;
+
+  const { data, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  const ls = document.getElementById('ls');
+  if (error) { ls.innerHTML = err(error.message); return; }
+
+  const listingsHTML = !data?.length
+    ? `<div class="listings-grid"><div class="empty">
+        <div class="empty-icon">🍳</div>
+        <div class="empty-title">Nog geen keukens</div>
+        <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
+      </div></div>`
+    : `<div class="listings-grid">${data.map(l => listingCardHTML(l)).join('')}</div>
+       <div style="text-align:center;margin-top:32px">
+         <button class="hero-btn hero-btn-outline" onclick="go('keukens')">Bekijk alle keukens →</button>
+       </div>`;
+
+  ls.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Recent aangeboden</div>
+    </div>
+    ${listingsHTML}`;
 }
 
 // ── ALLE KEUKENS ──────────────────────────────────────────
