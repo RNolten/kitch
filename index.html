@@ -2338,7 +2338,8 @@ async function pageLogin(el) {
           <div class="role-opt" data-r="aanbieder" onclick="selRole(this)"><div class="ri">🏠</div><div class="rl">Aanbieder</div></div>
           <div class="role-opt" data-r="monteur" onclick="selRole(this)"><div class="ri">🔧</div><div class="rl">Monteur</div></div>
         </div>
-      </div>` : ''}
+      </div>
+      <div id="rol-intro"></div>` : ''}
       <button class="submit-btn" id="ab" onclick="doAuth('${tab}')">
         ${tab==='login' ? 'Inloggen' : 'Account aanmaken'}
       </button>
@@ -2346,9 +2347,23 @@ async function pageLogin(el) {
   };
 
   window.setTab = t => { tab = t; draw(); };
+  const ROL_INTRO = {
+    koper: ``,
+    aanbieder: `<div style="background:var(--accent-light);border:2px solid var(--accent);border-radius:var(--r-md);padding:16px 18px;font-size:13.5px;line-height:1.8;color:var(--gray-5)">
+      <p style="margin-bottom:10px">Hi! Mooi dat je je oude lievelingsplek een nieuw huis wil geven. Dat is fijn voor iedereen.</p>
+      <p style="margin-bottom:10px">Wees wel realistisch. Terwijl jouw voormalige droomkeuken al tijden strak tegen de muur staat, moet de nieuwe eigenaar ontzettend passen en meten. Er zijn vaak geen extra passtukken, de leidingen zitten nooit op de goede plek en de maten zullen ook niet exact zijn.</p>
+      <p style="margin-bottom:10px">De montage kost vaak een stuk meer dan bij een nieuwe keuken, omdat er veel meer aangepast moet worden. Dan is er nog demontage en vervoer.</p>
+      <p style="margin-bottom:10px">Een extra zakcentje is lekker, maar bedenk ook dat je zelf geen keuken hoeft te demonteren en af te voeren. Daarbij doe je ook wat goeds voor Moeder Aarde. Ook wat waard toch?</p>
+      <p style="font-weight:800;color:var(--black)">Joe!</p>
+    </div>`,
+    monteur: ``,
+  };
+
   window.selRole = el => {
     document.querySelectorAll('.role-opt').forEach(r => r.classList.remove('sel'));
     el.classList.add('sel');
+    const intro = document.getElementById('rol-intro');
+    if (intro) intro.innerHTML = ROL_INTRO[el.dataset.r] || '';
   };
   window.doAuth = async mode => {
     const email = v('a_e'), pw = v('a_p'), aa = document.getElementById('aa');
