@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KitchKitch — Tweedehands keukens</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FAFAF7;
+      --white: #FFFFFF;
+      --black: #1C1C1E;
+      --accent: #FF6B35;
+      --accent-dark: #E55A25;
+      --gray-1: #F2F2F7;
+      --gray-2: #E5E5EA;
+      --gray-3: #C7C7CC;
+      --gray-4: #8E8E93;
+      --gray-5: #636366;
+      --green: #30D158;
+      --red: #FF453A;
+      --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+      --sh-sm: 0 1px 3px rgba(0,0,0,0.07);
+      --sh-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--black); min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--white); border-bottom: 1px solid var(--gray-2);
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+      cursor: pointer; color: var(--black); text-decoration: none;
+    }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      padding: 7px 16px; border-radius: 20px; font-size: 14px;
+      font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ghost { background: var(--gray-1); color: var(--black); }
+    .btn-ghost:hover { background: var(--gray-2); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-danger { background: #FFF0F0; color: var(--red); }
+    .btn-danger:hover { background: #FFE0E0; }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+
+    /* LAYOUT */
+    main { min-height: calc(100vh - 60px); }
+    .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .page-narrow { max-width: 540px; margin: 0 auto; padding: 32px 24px; }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 72px 24px; text-align: center; color: white;
+    }
+    .hero-eyebrow {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: clamp(30px, 5vw, 52px); font-weight: 800;
+      letter-spacing: -1.5px; margin-bottom: 14px; line-height: 1.1;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-sub {
+      font-size: 16px; color: rgba(255,255,255,0.6);
+      margin-bottom: 36px; line-height: 1.6; max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-btn {
+      padding: 13px 28px; border-radius: 28px; font-size: 15px;
+      font-weight: 700; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .hero-btn-primary { background: var(--accent); color: white; }
+    .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,107,53,0.4); }
+    .hero-btn-outline { background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.25); }
+    .hero-btn-outline:hover { background: rgba(255,255,255,0.1); }
+
+    /* STATS BAR */
+    .stats-bar {
+      background: white; border-bottom: 1px solid var(--gray-2);
+      padding: 14px 24px; display: flex; justify-content: center; gap: 48px;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 20px; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--gray-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* LISTINGS */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    }
+    .section-title { font-size: 20px; font-weight: 800; }
+    .section-count { font-size: 14px; color: var(--gray-4); }
+
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 20px;
+    }
+    .listing-card {
+      background: white; border-radius: var(--r-lg);
+      overflow: hidden; box-shadow: var(--sh-sm);
+      cursor: pointer; transition: all 0.2s;
+      border: 1px solid var(--gray-2);
+    }
+    .listing-card:hover { box-shadow: var(--sh-md); transform: translateY(-3px); }
+    .listing-img {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover;
+      background: var(--gray-1); display: flex; align-items: center;
+      justify-content: center; font-size: 52px; overflow: hidden;
+    }
+    .listing-img img { width: 100%; height: 100%; object-fit: cover; }
+    .listing-body { padding: 14px 16px 16px; }
+    .listing-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .listing-brand { font-size: 13px; color: var(--gray-4); margin-bottom: 10px; }
+    .listing-dims { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .dim-tag {
+      font-size: 11px; font-weight: 600;
+      background: var(--gray-1); color: var(--gray-5);
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .listing-footer { display: flex; align-items: center; justify-content: space-between; }
+    .listing-price { font-size: 19px; font-weight: 800; }
+    .listing-city { font-size: 12px; color: var(--gray-4); }
+
+    /* EMPTY */
+    .empty {
+      text-align: center; padding: 80px 24px; color: var(--gray-4);
+      grid-column: 1 / -1;
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--black); margin-bottom: 6px; }
+    .empty-text { font-size: 14px; line-height: 1.5; }
+
+    /* DETAIL */
+    .detail-grid { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
+    .gallery { border-radius: var(--r-lg); overflow: hidden; background: var(--gray-1); aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
+    .gallery img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-empty { font-size: 80px; }
+    .thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+    .thumb {
+      width: 70px; height: 52px; object-fit: cover;
+      border-radius: 7px; cursor: pointer; flex-shrink: 0;
+      border: 2px solid transparent; transition: border-color 0.15s; opacity: 0.7;
+    }
+    .thumb.active { border-color: var(--accent); opacity: 1; }
+
+    .sticky-card {
+      background: white; border-radius: var(--r-lg); padding: 24px;
+      box-shadow: var(--sh-md); border: 1px solid var(--gray-2);
+      position: sticky; top: 76px;
+    }
+    .detail-price { font-size: 34px; font-weight: 800; margin-bottom: 4px; }
+    .detail-title { font-size: 21px; font-weight: 700; margin-bottom: 6px; line-height: 1.25; }
+    .detail-city { font-size: 14px; color: var(--gray-4); margin-bottom: 18px; }
+    .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .spec { background: var(--gray-1); border-radius: var(--r-sm); padding: 10px 12px; }
+    .spec-lbl { font-size: 10px; font-weight: 700; color: var(--gray-4); text-transform: uppercase; letter-spacing: 0.6px; }
+    .spec-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .cta-btn {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: var(--r-md); font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; margin-bottom: 12px;
+    }
+    .cta-btn:hover { background: var(--accent-dark); }
+    .seller-row {
+      display: flex; align-items: center; gap: 12px;
+      padding-top: 16px; border-top: 1px solid var(--gray-2);
+    }
+    .seller-av {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gray-2); color: var(--gray-5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; flex-shrink: 0;
+    }
+    .seller-name { font-size: 14px; font-weight: 600; }
+    .seller-role { font-size: 12px; color: var(--gray-4); }
+    .desc-block { margin-top: 28px; }
+    .desc-block h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .desc-text { font-size: 14px; color: var(--gray-5); line-height: 1.7; }
+
+    /* FORM */
+    .card {
+      background: white; border-radius: var(--r-lg); padding: 32px;
+      box-shadow: var(--sh-sm); border: 1px solid var(--gray-2);
+    }
+    .card-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .card-sub { font-size: 14px; color: var(--gray-4); margin-bottom: 28px; line-height: 1.5; }
+
+    .fg { margin-bottom: 18px; }
+    .fl {
+      display: block; font-size: 11px; font-weight: 700; color: var(--gray-5);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px;
+    }
+    .fi, .fs, .ft {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--gray-2);
+      border-radius: var(--r-sm); font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s; background: white;
+    }
+    .fi:focus, .fs:focus, .ft:focus { border-color: var(--accent); }
+    .ft { resize: vertical; min-height: 90px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* PHOTO SLOTS */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+    .photo-slot {
+      aspect-ratio: 4/3; border: 2px dashed var(--gray-3);
+      border-radius: var(--r-sm); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; cursor: pointer;
+      transition: all 0.15s; overflow: hidden; position: relative;
+      background: var(--gray-1);
+    }
+    .photo-slot:hover { border-color: var(--accent); background: #FFF3EF; }
+    .photo-slot.filled { border-style: solid; border-color: var(--gray-2); }
+    .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .slot-icon { font-size: 22px; }
+    .slot-text { font-size: 10px; color: var(--gray-4); margin-top: 4px; }
+    .rm-btn {
+      position: absolute; top: 4px; right: 4px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); color: white;
+      border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+    }
+
+    .submit-btn {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: var(--r-md); font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 8px; transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* AUTH */
+    .tabs { display: flex; margin-bottom: 28px; border-bottom: 1.5px solid var(--gray-2); }
+    .tab {
+      flex: 1; padding: 12px; text-align: center; font-size: 15px; font-weight: 600;
+      cursor: pointer; color: var(--gray-4);
+      border-bottom: 2.5px solid transparent; margin-bottom: -1.5px; transition: all 0.15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .role-opt {
+      border: 2px solid var(--gray-2); border-radius: var(--r-md); padding: 14px 8px;
+      text-align: center; cursor: pointer; transition: all 0.15s;
+    }
+    .role-opt:hover { border-color: var(--accent); }
+    .role-opt.sel { border-color: var(--accent); background: #FFF3EF; }
+    .role-opt .ri { font-size: 26px; margin-bottom: 6px; }
+    .role-opt .rl { font-size: 12px; font-weight: 600; color: var(--gray-5); }
+
+    /* MY ACCOUNT */
+    .my-item {
+      background: white; border: 1px solid var(--gray-2); border-radius: var(--r-md);
+      padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; margin-bottom: 10px;
+    }
+    .my-thumb {
+      width: 80px; height: 60px; border-radius: 8px; flex-shrink: 0;
+      object-fit: cover; background: var(--gray-1);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden;
+    }
+    .my-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .my-body { flex: 1; min-width: 0; }
+    .my-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+    .my-meta { font-size: 13px; color: var(--gray-4); margin-bottom: 8px; }
+    .my-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .s-actief { background: #D1FAE5; color: #065F46; }
+    .s-gereserveerd { background: #FEF3C7; color: #92400E; }
+    .s-verkocht { background: var(--gray-1); color: var(--gray-4); }
+
+    /* MISC */
+    .back {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 14px; font-weight: 600; color: var(--gray-5);
+      cursor: pointer; background: none; border: none; padding: 0; margin-bottom: 24px;
+    }
+    .back:hover { color: var(--black); }
+    .spin-wrap { display: flex; align-items: center; justify-content: center; padding: 80px; }
+    .spin {
+      width: 36px; height: 36px; border: 3px solid var(--gray-2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .alert {
+      padding: 11px 14px; border-radius: var(--r-sm); font-size: 14px;
+      margin-bottom: 16px; line-height: 1.5;
+    }
+    .alert-err { background: #FFF0F0; color: #C00; border: 1px solid #FFD0D0; }
+    .alert-ok { background: #F0FFF4; color: #065F46; border: 1px solid #BBF7D0; }
+    .divider { border: none; border-top: 1px solid var(--gray-2); margin: 20px 0; }
+
+    /* FORM PAGE */
+    .page-form { max-width: 660px; margin: 0 auto; padding: 32px 24px; }
+    .form-card {
+      background: white; border-radius: var(--r-lg); padding: 28px 32px;
+      box-shadow: var(--sh-sm); border: 1px solid var(--gray-2); margin-bottom: 16px;
+    }
+    .form-card-title {
+      font-size: 12px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--gray-4); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* CHIP SELECTOR */
+    .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chip {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      border: 1.5px solid var(--gray-2); background: white; cursor: pointer;
+      transition: all 0.15s; color: var(--gray-5); user-select: none;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.sel { border-color: var(--accent); background: #FFF3EF; color: var(--accent); }
+
+    /* CHECKBOX GRID */
+    .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .check-item {
+      display: flex; align-items: center; gap: 9px; padding: 9px 12px;
+      border-radius: var(--r-sm); background: var(--gray-1); cursor: pointer;
+      font-size: 13px; font-weight: 500; user-select: none; transition: background 0.1s;
+    }
+    .check-item:has(input:checked) { background: #FFF3EF; }
+    .check-item input[type=checkbox] {
+      accent-color: var(--accent); width: 15px; height: 15px;
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    /* TOGGLE ROW */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 0; border-bottom: 1px solid var(--gray-2);
+    }
+    .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .toggle-label { font-size: 14px; font-weight: 600; }
+    .toggle-sub { font-size: 12px; color: var(--gray-4); margin-top: 2px; }
+    .toggle {
+      width: 44px; height: 26px; border-radius: 13px; background: var(--gray-3);
+      border: none; cursor: pointer; position: relative; transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%; background: white;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on::after { transform: translateX(18px); }
+
+    /* TEKENINGEN UPLOAD */
+    .tekening-drop {
+      border: 2px dashed var(--gray-3); border-radius: var(--r-md);
+      padding: 24px; text-align: center; cursor: pointer;
+      transition: all 0.15s; background: var(--gray-1);
+    }
+    .tekening-drop:hover { border-color: var(--accent); background: #FFF3EF; }
+    .tekening-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .tekening-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--gray-1); border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 500;
+    }
+
+    /* KASTINDELING EDITOR */
+    .kast-row { display: flex; gap: 3px; align-items: stretch; flex-wrap: wrap; }
+    .kast-seg {
+      height: 34px; border-radius: 4px; border: 1.5px solid transparent;
+      cursor: pointer; font-size: 13px; display: flex; align-items: center;
+      justify-content: center; transition: all 0.12s; min-width: 24px;
+      padding: 0; outline: none;
+    }
+    .kast-seg:hover { filter: brightness(0.88); transform: scaleY(1.05); }
+
+    /* APPARATUUR TAGS (detail page) */
+    .app-tags { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .app-tag {
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      background: var(--gray-1); color: var(--gray-5); border: 1px solid var(--gray-2);
+    }
+
+    @media (max-width: 768px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      .sticky-card { position: static; }
+      .stats-bar { gap: 24px; }
+    }
+    @media (max-width: 540px) {
+      nav { padding: 0 16px; }
+      .page, .page-narrow, .page-form { padding: 20px 14px; }
+      .card, .form-card { padding: 20px 16px; }
+      .listings-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .row3 { grid-template-columns: 1fr; }
+      .role-grid { grid-template-columns: 1fr; }
+      .hero { padding: 48px 20px; }
+      .check-grid { grid-template-columns: 1fr; }
+      .chip-group .chip { font-size: 12px; padding: 6px 12px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"><div class="spin-wrap"><div class="spin"></div></div></div>
+<input type="file" id="fileIn" accept="image/*" multiple style="display:none">
+<input type="file" id="fileInTekening" accept="image/*,.pdf" multiple style="display:none">
+
+<script>
+const SB_URL = 'https://eakmmmylfqqjflnacrub.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVha21tbXlsZnFxamZsbmFjcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTQyOTcsImV4cCI6MjA5NTI3MDI5N30.TcRayQcLsu3Lg2-Fe1HROyvKSfoZQkkOLbR9EJiKB44';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+let user = null, profile = null, pendingPhotos = [], pendingTekeningen = [], pendingApparatuur = [], kastData = {};
+
+// ── ROUTER ────────────────────────────────────────────────
+async function router() {
+  const { data: { user: u } } = await db.auth.getUser();
+  user = u;
+  if (u) {
+    const { data } = await db.from('profiles').select('*').eq('id', u.id).single();
+    profile = data;
+  }
+
+  // Check voor Stripe betaling redirect (?payment=success&...)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment') === 'cancelled') {
+    const monteurId = urlParams.get('monteur_id');
+    history.replaceState(null, '', window.location.pathname);
+    location.hash = '#monteur/' + monteurId;
+    return;
+  }
+  if (urlParams.get('payment') === 'success') {
+    const sessionId = urlParams.get('session_id');
+    const monteurId = urlParams.get('monteur_id');
+    const app = document.getElementById('app');
+    app.innerHTML = navHTML() + `<main><div class="spin-wrap" style="flex-direction:column;gap:16px">
+      <div class="spin"></div>
+      <div style="font-size:14px;color:var(--gray-4)">Betaling verifiëren…</div>
+    </div></main>`;
+    // Haal session_id op uit sessionStorage
+    const pending = JSON.parse(sessionStorage.getItem('kk_pending') || '{}');
+    sessionStorage.removeItem('kk_pending');
+    const resolvedSessionId = pending.session_id || sessionId;
+    if (resolvedSessionId && monteurId && user) {
+      await verifyPayment(resolvedSessionId, monteurId, user.id);
+    }
+    history.replaceState(null, '', window.location.pathname);
+    location.hash = '#monteur/' + monteurId;
+    return;
+  }
+
+  const hash = location.hash.slice(1) || '/';
+  const parts = hash.split('/').filter(Boolean);
+  const route = parts[0] || '';
+  const param = parts[1];
+
+  const app = document.getElementById('app');
+  app.innerHTML = navHTML();
+  const main = document.createElement('main');
+  app.appendChild(main);
+
+  if (route === '')               await pageHome(main);
+  else if (route === 'k')         await pageDetail(main, param);
+  else if (route === 'aanbieden') await pageAanbieden(main);
+  else if (route === 'login')     await pageLogin(main);
+  else if (route === 'mijn')      await pageMijn(main);
+  else if (route === 'monteur' && param) await pageMonteurProfiel(main, param);
+  else if (route === 'monteur')   await pageMonteur(main);
+  else                            await pageHome(main);
+}
+
+const go = p => location.hash = '#' + p;
+window.addEventListener('hashchange', router);
+window.addEventListener('DOMContentLoaded', router);
+
+// ── NAV ───────────────────────────────────────────────────
+function navHTML() {
+  const init = profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '';
+  const isMonteur = profile?.role === 'monteur';
+  return `<nav>
+    <div class="logo" onclick="go('')">Kitch<span>Kitch</span></div>
+    <div class="nav-right">
+      ${user ? `
+        ${isMonteur
+          ? `<button class="btn btn-ghost" onclick="go('monteur')">🔧 Mijn klussen</button>`
+          : `<button class="btn btn-primary" onclick="go('aanbieden')">+ Aanbieden</button>`
+        }
+        <div class="nav-avatar" onclick="go('mijn')" title="Mijn account">${init}</div>
+      ` : `
+        <button class="btn btn-ghost" onclick="go('login')">Inloggen</button>
+        <button class="btn btn-primary" onclick="go('aanbieden')">Keuken aanbieden</button>
+      `}
+    </div>
+  </nav>`;
+}
+
+// ── HOME ──────────────────────────────────────────────────
+async function pageHome(el) {
+  el.innerHTML = `
+    <div class="hero">
+      <div class="hero-eyebrow">Duurzamer wonen</div>
+      <div class="hero-title">Geef je keuken een<br><span>tweede leven</span></div>
+      <div class="hero-sub">Tweedehands keukens met vakkundige plaatsing.<br>Betaalbaarder, duurzamer, zorgeloos.</div>
+      <div class="hero-cta">
+        <button class="hero-btn hero-btn-primary" onclick="go('aanbieden')">Keuken aanbieden</button>
+        <button class="hero-btn hero-btn-outline" onclick="document.getElementById('ls').scrollIntoView({behavior:'smooth'})">Bekijk keukens ↓</button>
+      </div>
+    </div>
+    <div id="ls" class="page"><div class="spin-wrap"><div class="spin"></div></div></div>`;
+
+  const { data, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false });
+
+  const ls = document.getElementById('ls');
+
+  if (error) { ls.innerHTML = err(error.message); return; }
+
+  if (!data?.length) {
+    ls.innerHTML = `<div class="listings-grid"><div class="empty">
+      <div class="empty-icon">🍳</div>
+      <div class="empty-title">Nog geen keukens</div>
+      <div class="empty-text">Wees de eerste die een keuken aanbiedt!</div>
+    </div></div>`;
+    return;
+  }
+
+  ls.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Beschikbare keukens</div>
+      <div class="section-count">${data.length} keuken${data.length !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="listings-grid">
+      ${data.map(l => {
+        const photos = sort(l.listing_photos);
+        const img = photos[0]?.url;
+        const tags = [l.keuken_type, l.conditie].filter(Boolean);
+        return `<div class="listing-card" onclick="go('k/${l.id}')">
+          <div class="listing-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '🍳'}</div>
+          <div class="listing-body">
+            <div class="listing-title">${esc(l.title)}</div>
+            <div class="listing-brand">${esc(l.brand || '')}${l.color ? ' · ' + esc(l.color) : ''}</div>
+            ${tags.length ? `<div class="listing-dims">
+              ${tags.map(t => `<span class="dim-tag">${esc(t)}</span>`).join('')}
+              ${l.width_cm ? `<span class="dim-tag">↔ ${l.width_cm}cm</span>` : ''}
+            </div>` : l.width_cm ? `<div class="listing-dims">
+              <span class="dim-tag">↔ ${l.width_cm}cm</span>
+              ${l.depth_cm ? `<span class="dim-tag">↕ ${l.depth_cm}cm</span>` : ''}
+              ${l.height_cm ? `<span class="dim-tag">↑ ${l.height_cm}cm</span>` : ''}
+            </div>` : '<div style="height:26px"></div>'}
+            <div class="listing-footer">
+              <div class="listing-price">€${l.price.toLocaleString('nl')}</div>
+              <div class="listing-city">📍 ${esc(l.city || '')}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── DETAIL ────────────────────────────────────────────────
+async function pageDetail(el, id) {
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data: l, error } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index, foto_type), profiles(name, phone, contact_email)')
+    .eq('id', id)
+    .single();
+
+  const { data: offertes } = await db
+    .from('offertes')
+    .select('*, profiles(name, regio, richtprijs)')
+    .eq('listing_id', id)
+    .order('prijs', { ascending: true })
+    .limit(3);
+
+  if (error || !l) { el.innerHTML = `<div class="page">${err('Keuken niet gevonden.')}</div>`; return; }
+
+  const allPhotos = sort(l.listing_photos);
+  const photos = allPhotos.filter(p => p.foto_type !== 'tekening');
+  const tekeningen = allPhotos.filter(p => p.foto_type === 'tekening');
+  let active = 0;
+
+  function galleryHTML() {
+    return `
+      <div class="gallery" id="mg">
+        ${photos.length ? `<img src="${photos[active].url}" alt="">` : `<div class="gallery-empty">🍳</div>`}
+      </div>
+      ${photos.length > 1 ? `<div class="thumbs">
+        ${photos.map((p, i) => `<img src="${p.url}" class="thumb${i === active ? ' active' : ''}" onclick="setPhoto(${i})" alt="">`).join('')}
+      </div>` : ''}`;
+  }
+
+  window.setPhoto = i => {
+    active = i;
+    document.getElementById('gw').innerHTML = galleryHTML();
+  };
+
+  const sn    = l.profiles?.name || 'Aanbieder';
+  const phone = l.profiles?.phone || null;
+  const cemail= l.profiles?.contact_email || null;
+
+  // Parse afmetingen JSON voor detail schets
+  let afmJson = null;
+  try { if (l.afmetingen) afmJson = JSON.parse(l.afmetingen); } catch(e) {}
+
+  // Bouw maatoverzicht op basis van afmJson of losse velden
+  const maatRegels = [];
+  if (afmJson) {
+    const fields = DIAG_FIELDS[afmJson.type] || DIAG_FIELDS['Rechte keuken'];
+    fields.forEach(f => {
+      if (afmJson[f.id]) maatRegels.push({ l: f.lbl, v: afmJson[f.id] + ' cm' });
+    });
+    if (afmJson.hoogte) maatRegels.push({ l: 'Hoogte', v: afmJson.hoogte + ' cm' });
+  } else {
+    if (l.width_cm)  maatRegels.push({ l: 'Breedte', v: l.width_cm  + ' cm' });
+    if (l.depth_cm)  maatRegels.push({ l: 'Diepte',  v: l.depth_cm  + ' cm' });
+    if (l.height_cm) maatRegels.push({ l: 'Hoogte',  v: l.height_cm + ' cm' });
+  }
+
+  const specs = [
+    l.keuken_type    && { l: 'Type',     v: l.keuken_type },
+    l.conditie       && { l: 'Conditie', v: l.conditie },
+    l.brand          && { l: 'Merk',     v: l.brand },
+    l.color          && { l: 'Kleur',    v: l.color },
+    l.materiaal_blad && { l: 'Blad',     v: l.materiaal_blad },
+    l.leeftijd_jaar  && { l: 'Leeftijd', v: l.leeftijd_jaar + ' jaar' },
+  ].filter(Boolean);
+
+  const praktisch = [
+    l.ophalen_bezorgen && { icon: '🚚', v: l.ophalen_bezorgen },
+    l.demontage        && { icon: '🔧', v: l.demontage },
+    l.incl_bovenkasten && { icon: '✅', v: 'Inclusief bovenkasten' },
+    l.incl_spoelbak    && { icon: '✅', v: 'Inclusief spoelbak' },
+  ].filter(Boolean);
+
+  let apparatuurItems = [];
+  try {
+    if (l.apparatuur) {
+      const parsed = JSON.parse(l.apparatuur);
+      apparatuurItems = Array.isArray(parsed) ? parsed : l.apparatuur.split(', ').map(s => ({ type: s }));
+    }
+  } catch(e) {
+    // backward compat: old comma-separated string
+    apparatuurItems = l.apparatuur ? l.apparatuur.split(', ').filter(Boolean).map(s => ({ type: s })) : [];
+  }
+
+  el.innerHTML = `<div class="page">
+    <button class="back" onclick="go('')">← Terug naar overzicht</button>
+    <div class="detail-grid">
+      <div>
+        <div id="gw">${galleryHTML()}</div>
+        ${l.description ? `<div class="desc-block">
+          <h3>Omschrijving</h3>
+          <div class="desc-text">${esc(l.description)}</div>
+        </div>` : ''}
+        ${(afmJson || maatRegels.length) ? `<div class="desc-block">
+          <h3>Afmetingen</h3>
+          ${afmJson ? `
+          <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:8px;margin:10px 0;overflow:hidden">
+            ${keukenSVG(afmJson.type || 'Rechte keuken', afmJson, afmJson.kastData || {})}
+          </div>` : ''}
+          ${maatRegels.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+            ${maatRegels.map(m => `<div style="background:var(--gray-1);border-radius:var(--r-sm);padding:8px 10px">
+              <div style="font-size:9px;font-weight:700;color:var(--gray-4);text-transform:uppercase;letter-spacing:0.5px">${esc(m.l)}</div>
+              <div style="font-size:14px;font-weight:700;margin-top:1px">${esc(m.v)}</div>
+            </div>`).join('')}
+          </div>` : ''}
+        </div>` : ''}
+        ${apparatuurItems.length ? `<div class="desc-block">
+          <h3>Apparatuur inbegrepen</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            ${apparatuurItems.map(a => `
+              <div style="padding:10px 12px;background:var(--gray-1);border-radius:var(--r-sm);border:1px solid var(--gray-2)">
+                <div style="font-size:13px;font-weight:700">✓ ${esc(a.type || a)}</div>
+                ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).length ? `
+                  <div style="font-size:11px;color:var(--gray-4);margin-top:3px">
+                    ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).map(t => esc(t)).join(' · ')}
+                  </div>` : ''}
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+        ${praktisch.length ? `<div class="desc-block">
+          <h3>Praktisch</h3>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+            ${praktisch.map(p => `<div style="font-size:13px;font-weight:500;color:var(--gray-5)">${p.icon} ${esc(p.v)}</div>`).join('')}
+          </div>
+        </div>` : ''}
+        ${tekeningen.length ? `<div class="desc-block">
+          <h3>Maattekeningen & plattegronden</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+            ${tekeningen.map((t, i) => {
+              const isPdf = t.url.toLowerCase().includes('.pdf') || t.url.toLowerCase().endsWith('pdf');
+              return isPdf
+                ? `<a href="${t.url}" target="_blank" style="display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--gray-1);border-radius:var(--r-sm);text-decoration:none;color:var(--black);font-size:13px;font-weight:600;border:1px solid var(--gray-2)">📄 Tekening ${i+1}</a>`
+                : `<a href="${t.url}" target="_blank"><img src="${t.url}" style="height:90px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--gray-2)" alt="Tekening ${i+1}"></a>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+      <div>
+        <div class="sticky-card">
+          <div class="detail-price">€${l.price.toLocaleString('nl')}</div>
+          <div class="detail-title">${esc(l.title)}</div>
+          <div class="detail-city">📍 ${esc(l.city || 'Locatie onbekend')}</div>
+          ${specs.length ? `<div class="specs">
+            ${specs.map(s => `<div class="spec"><div class="spec-lbl">${s.l}</div><div class="spec-val">${esc(s.v)}</div></div>`).join('')}
+          </div>` : ''}
+          ${phone || cemail ? `
+            <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--gray-4)">Neem contact op</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+              ${phone ? `<a href="https://wa.me/${waNum(phone)}?text=${encodeURIComponent('Hoi! Ik heb je keuken gezien op KitchKitch: ' + l.title + ' voor €' + l.price + '. Ik ben geïnteresseerd!')}" target="_blank" class="cta-btn" style="flex:1;text-decoration:none;text-align:center;background:#25D366">💬 WhatsApp</a>` : ''}
+              ${cemail ? `<a href="mailto:${cemail}?subject=${encodeURIComponent('Interesse in: ' + l.title)}&body=${encodeURIComponent('Hoi,\n\nIk heb je keuken gezien op KitchKitch (' + l.title + ' voor €' + l.price + ') en ben geïnteresseerd.\n\nGroet')}" class="cta-btn" style="flex:1;text-decoration:none;text-align:center;background:#1C1C1E">✉️ E-mail</a>` : ''}
+            </div>
+          ` : `<button class="cta-btn" onclick="contact()">Ik ben geïnteresseerd</button>`}
+          <div class="seller-row">
+            <div class="seller-av">${sn[0]?.toUpperCase() || '?'}</div>
+            <div>
+              <div class="seller-name">${esc(sn)}</div>
+              <div class="seller-role">Aanbieder</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px">🔧 Monteurs in de buurt</div>
+          ${offertes?.length ? `
+            ${offertes.map((o, i) => `
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:${i===0?'#F0FFF4':'var(--gray-1)'};margin-bottom:8px;border:1.5px solid ${i===0?'#86efac':'transparent'};cursor:pointer" onclick="go('monteur/${o.monteur_id}')">
+                <div style="font-size:18px;margin-top:1px">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline">${esc(o.profiles?.name || 'Monteur')}</div>
+                  ${o.profiles?.regio ? `<div style="font-size:11px;color:var(--gray-4)">📍 ${esc(o.profiles.regio)}</div>` : ''}
+                  ${o.voorbehouden ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px;font-style:italic">⚠️ ${esc(o.voorbehouden)}</div>` : ''}
+                </div>
+                <div style="font-size:15px;font-weight:800;color:${i===0?'#16a34a':'var(--black)'}">€${o.prijs.toLocaleString('nl')}</div>
+              </div>`).join('')}
+            <div style="background:var(--gray-1);border-radius:10px;padding:12px 14px;margin-top:4px">
+              <div style="font-size:12px;color:var(--gray-4);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Totaal incl. beste monteur</div>
+              <div style="font-size:22px;font-weight:800;margin-top:2px">€${(l.price + offertes[0].prijs).toLocaleString('nl')}</div>
+            </div>
+          ` : `
+            <div style="font-size:13px;color:var(--gray-4);padding:12px;background:var(--gray-1);border-radius:10px">
+              Nog geen monteurs beschikbaar in deze regio. Binnenkort meer aanbod.
+            </div>
+          `}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.contact = () => {
+  if (!user) { go('login'); return; }
+  alert('Deze aanbieder heeft nog geen contactgegevens ingevuld.');
+};
+
+function waNum(num) {
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('0')) return '31' + clean.slice(1);
+  if (clean.startsWith('31')) return clean;
+  return clean;
+}
+
+// ── AANBIEDEN ─────────────────────────────────────────────
+async function pageAanbieden(el) {
+  if (!user) {
+    el.innerHTML = `<div class="page-narrow"><div class="card" style="text-align:center;padding:48px">
+      <div style="font-size:48px;margin-bottom:16px">🔑</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">Log eerst in</div>
+      <div style="font-size:14px;color:var(--gray-4);margin-bottom:24px">Je hebt een account nodig om een keuken aan te bieden.</div>
+      <button class="btn btn-primary" style="margin:0 auto" onclick="go('login')">Inloggen / Registreren</button>
+    </div></div>`;
+    return;
+  }
+
+  pendingPhotos = [];
+  pendingTekeningen = [];
+  pendingApparatuur = [];
+
+  const chips = (group, options) => options.map(v =>
+    `<div class="chip" data-group="${group}" data-val="${v}" onclick="selChip(this)">${v}</div>`
+  ).join('');
+
+  el.innerHTML = `<div class="page-form">
+    <div style="margin-bottom:28px">
+      <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px">Keuken aanbieden</h1>
+      <div style="font-size:14px;color:var(--gray-4)">Hoe completer je advertentie, hoe sneller je een koper vindt.</div>
+    </div>
+    <div id="fa"></div>
+
+    <div class="form-card">
+      <div class="form-card-title">📷 Foto's</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Voeg minimaal één foto toe — meer foto's = meer reacties. Max 6.</div>
+      <div class="photo-grid" id="pg">${photoGridHTML()}</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">🏷️ Over de keuken</div>
+      <div class="fg" style="margin-bottom:20px"><label class="fl">Titel *</label>
+        <input id="f_t" class="fi" placeholder="Bijv. Witte IKEA Metod hoekopstelling, 3,5 meter" maxlength="100"></div>
+      <div class="row2">
+        <div class="fg"><label class="fl">Vraagprijs (€) *</label>
+          <input id="f_p" class="fi" type="number" placeholder="750" min="0"></div>
+        <div class="fg"><label class="fl">Stad *</label>
+          <input id="f_city" class="fi" placeholder="Amsterdam"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">✨ Kenmerken</div>
+
+      <div class="fg"><label class="fl">Type keuken</label>
+        <div class="chip-group">
+          ${chips('keuken_type', ['Rechte keuken','Hoek','U-vorm','Eiland','Galley','Overig'])}
+        </div>
+      </div>
+
+      <div class="fg"><label class="fl">Conditie</label>
+        <div class="chip-group">
+          ${chips('conditie', ['Zo goed als nieuw','Goed','Normaal gebruik','Heeft gebreken'])}
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fg"><label class="fl">Kleur</label>
+          <input id="f_c" class="fi" placeholder="Wit, antraciet, hout…"></div>
+        <div class="fg"><label class="fl">Merk</label>
+          <input id="f_b" class="fi" placeholder="IKEA, Siematic, Nobilia…"></div>
+      </div>
+
+      <div class="fg"><label class="fl">Materiaal keukenblad</label>
+        <div class="chip-group">
+          ${chips('materiaal_blad', ['Composiet','Keramiek','Graniet','Hout','Kunststof','RVS','Overig'])}
+        </div>
+      </div>
+
+      <div class="fg" style="max-width:200px"><label class="fl">Leeftijd (jaar)</label>
+        <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50"></div>
+    </div>
+
+    <div class="form-card" id="afm-card">
+      <div class="form-card-title">📐 Afmetingen</div>
+      <div id="afm-wrap"><!-- wordt gevuld door renderAfmetingen() --></div>
+      <div class="fg" style="max-width:210px;margin-top:16px">
+        <label class="fl">Hoogte kasten (cm)</label>
+        <input id="f_h" class="fi" type="number" placeholder="210" min="0">
+        <div style="font-size:11px;color:var(--gray-4);margin-top:4px">normaal 210–220 cm</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">⚙️ Apparatuur inbegrepen</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Voeg elk apparaat toe met merk, kleur en kenmerken. Monteurs waarderen dit enorm.</div>
+      <div id="app-list"></div>
+      <div style="background:var(--gray-1);border-radius:var(--r-md);padding:16px">
+        <div class="row2" style="margin-bottom:0">
+          <div class="fg"><label class="fl">Type</label>
+            <select id="app_type" class="fi fs" style="cursor:pointer">
+              <option value="">Kies type…</option>
+              <option>Oven</option><option>Magnetron</option><option>Combimagnetron</option>
+              <option>Koelkast</option><option>Vriezer</option><option>Vaatwasser</option>
+              <option>Inductiekookplaat</option><option>Gaskookplaat</option><option>Ceranfeldkookplaat</option>
+              <option>Afzuigkap</option><option>Wijnklimaatkast</option><option>Quooker / kokendwater</option>
+              <option>Overig</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Merk</label>
+            <input id="app_merk" class="fi" placeholder="Bosch, Siemens, AEG…"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label class="fl">Kleur / uitvoering</label>
+            <input id="app_kleur" class="fi" placeholder="RVS, zwart, wit…"></div>
+          <div class="fg"><label class="fl">Model / kenmerken</label>
+            <input id="app_kenm" class="fi" placeholder="HBG675, 4-pits, pyrolyse…"></div>
+        </div>
+        <button type="button" onclick="addApparaat()" class="btn btn-primary btn-sm">+ Apparaat toevoegen</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">💬 Omschrijving</div>
+      <textarea id="f_desc" class="ft" style="min-height:130px"
+        placeholder="Vertel meer over de staat van de keuken, waarom je hem verkoopt, bijzonderheden…"></textarea>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">📄 Maattekeningen & plattegronden</div>
+      <div style="font-size:13px;color:var(--gray-4);margin-bottom:14px">Monteurs waarderen tekeningen enorm — het scheelt hen een bezoek vooraf. Voeg eventuele bouw- of installatietekeningen toe (PDF of afbeelding).</div>
+      <div class="tekening-drop" onclick="document.getElementById('fileInTekening').click()">
+        <div style="font-size:28px;margin-bottom:6px">📐</div>
+        <div style="font-size:14px;font-weight:600;color:var(--gray-5)">Klik om bestand toe te voegen</div>
+        <div style="font-size:12px;color:var(--gray-4);margin-top:4px">PDF, JPG of PNG · max 5 bestanden</div>
+      </div>
+      <div class="tekening-list" id="tl"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">🚚 Praktisch</div>
+
+      <div class="fg"><label class="fl">Ophalen / bezorgen</label>
+        <div class="chip-group">
+          ${chips('ophalen_bezorgen', ['Alleen ophalen','Bezorging mogelijk (meerkosten)','Bezorging inbegrepen'])}
+        </div>
+      </div>
+
+      <div class="fg"><label class="fl">Demontage</label>
+        <div class="chip-group">
+          ${chips('demontage', ['Zelf te demonteren','Professionele demontage nodig','Demontage inbegrepen'])}
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Inclusief bovenkasten</div>
+            <div class="toggle-sub">Hangkasten en wandkasten inbegrepen</div>
+          </div>
+          <button class="toggle" id="tgl_boven" onclick="toggleBtn('tgl_boven')"></button>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Inclusief spoelbak</div>
+            <div class="toggle-sub">Spoelbak en/of kraan inbegrepen</div>
+          </div>
+          <button class="toggle" id="tgl_spoelbak" onclick="toggleBtn('tgl_spoelbak')"></button>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="sb" onclick="submitListing()" style="margin-bottom:48px">
+      Advertentie plaatsen →
+    </button>
+  </div>`;
+
+  document.getElementById('fileIn').onchange = onPhotoSelect;
+  document.getElementById('fileInTekening').onchange = onTekeningSel;
+
+  // Teken het standaard diagram direct
+  renderAfmetingen('Rechte keuken');
+
+  el.addEventListener('click', e => {
+    const slot = e.target.closest('.photo-slot');
+    if (slot && !e.target.closest('.rm-btn') && !slot.classList.contains('filled')) {
+      document.getElementById('fileIn').click();
+    }
+  });
+}
+
+window.selChip = el => {
+  const group = el.getAttribute('data-group');
+  const was = el.classList.contains('sel');
+  document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c => c.classList.remove('sel'));
+  if (!was) el.classList.add('sel');
+  if (group === 'keuken_type' && document.getElementById('afm-wrap')) {
+    renderAfmetingen(was ? 'Rechte keuken' : el.getAttribute('data-val'));
+  }
+};
+
+window.toggleBtn = id => {
+  document.getElementById(id).classList.toggle('on');
+};
+
+function onTekeningSel(e) {
+  const left = 5 - pendingTekeningen.length;
+  Array.from(e.target.files).slice(0, left).forEach(file => {
+    pendingTekeningen.push({ file });
+    renderTekenList();
+  });
+  e.target.value = '';
+}
+
+function renderTekenList() {
+  const tl = document.getElementById('tl');
+  if (!tl) return;
+  tl.innerHTML = pendingTekeningen.map((t, i) =>
+    `<div class="tekening-item">
+      <span>📄 ${esc(t.file.name)}</span>
+      <button onclick="rmTekening(${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-4);font-size:18px;line-height:1;padding:0 2px">×</button>
+    </div>`
+  ).join('');
+}
+
+window.rmTekening = i => {
+  pendingTekeningen.splice(i, 1);
+  renderTekenList();
+};
+
+function renderApparaatList() {
+  const el = document.getElementById('app-list');
+  if (!el) return;
+  el.innerHTML = pendingApparatuur.length ? pendingApparatuur.map((a, i) => `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+      padding:10px 12px;background:white;border:1px solid var(--gray-2);border-radius:var(--r-sm);margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:700">✓ ${esc(a.type)}</div>
+        ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).length ? `
+          <div style="font-size:12px;color:var(--gray-4);margin-top:3px">
+            ${[a.merk, a.kleur, a.kenmerken].filter(Boolean).map(t => esc(t)).join(' · ')}
+          </div>` : ''}
+      </div>
+      <button onclick="rmApparaat(${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-4);font-size:18px;padding:0 2px;flex-shrink:0;line-height:1">×</button>
+    </div>`).join('') : '';
+}
+
+window.addApparaat = () => {
+  const type = document.getElementById('app_type')?.value;
+  if (!type) { alert('Kies eerst een type apparaat.'); return; }
+  pendingApparatuur.push({
+    type,
+    merk:      document.getElementById('app_merk')?.value.trim()  || '',
+    kleur:     document.getElementById('app_kleur')?.value.trim() || '',
+    kenmerken: document.getElementById('app_kenm')?.value.trim()  || '',
+  });
+  ['app_type','app_merk','app_kleur','app_kenm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderApparaatList();
+};
+
+window.rmApparaat = i => {
+  pendingApparatuur.splice(i, 1);
+  renderApparaatList();
+};
+
+function photoGridHTML() {
+  return Array.from({ length: 6 }, (_, i) => {
+    if (i < pendingPhotos.length) return `
+      <div class="photo-slot filled">
+        <img src="${pendingPhotos[i].url}" alt="">
+        <button class="rm-btn" onclick="rmPhoto(${i})">×</button>
+      </div>`;
+    if (i === pendingPhotos.length) return `
+      <div class="photo-slot">
+        <div class="slot-icon">📷</div>
+        <div class="slot-text">Toevoegen</div>
+      </div>`;
+    return `<div class="photo-slot" style="opacity:.3;cursor:default"></div>`;
+  }).join('');
+}
+
+function onPhotoSelect(e) {
+  const left = 6 - pendingPhotos.length;
+  Array.from(e.target.files).slice(0, left).forEach(file => {
+    const r = new FileReader();
+    r.onload = ev => {
+      pendingPhotos.push({ file, url: ev.target.result });
+      document.getElementById('pg').innerHTML = photoGridHTML();
+    };
+    r.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+window.rmPhoto = i => {
+  pendingPhotos.splice(i, 1);
+  document.getElementById('pg').innerHTML = photoGridHTML();
+};
+
+window.submitListing = async () => {
+  const title = v('f_t'), price = parseInt(v('f_p')), city = v('f_city');
+  const fa = document.getElementById('fa');
+  if (!title || !price || !city) {
+    fa.innerHTML = err('Vul minimaal een titel, prijs en stad in.');
+    fa.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const chipVal = group =>
+    document.querySelector(`.chip[data-group="${group}"].sel`)?.getAttribute('data-val') || null;
+  const isOn = id => document.getElementById(id)?.classList.contains('on') || false;
+
+  // Afmetingen: sla alles op als JSON + zet de hoofdwaarden voor backward compat
+  const afmType = chipVal('keuken_type') || 'Rechte keuken';
+  const afmCfg = DIAG_FIELDS[afmType] || DIAG_FIELDS['Rechte keuken'];
+  const afmData = { type: afmType };
+  afmCfg.forEach(f => { const n = parseInt(v(f.id)); if (n) afmData[f.id] = n; });
+  afmData.hoogte = parseInt(v('f_h')) || null;
+  if (Object.keys(kastData).length) afmData.kastData = kastData;
+  const mainBr = afmData.f_w || afmData.f_wand1 || afmData.f_wa || null;
+  const mainD  = afmData.f_d || null;
+
+  const checkedApp = pendingApparatuur;
+
+  const sb = document.getElementById('sb');
+  sb.disabled = true;
+  sb.innerHTML = `<div class="spin" style="width:18px;height:18px;border-width:2px"></div> Bezig…`;
+  fa.innerHTML = '';
+
+  try {
+    await db.from('profiles').upsert({
+      id: user.id,
+      name: profile?.name || user.email?.split('@')[0] || '',
+      role: profile?.role || 'aanbieder'
+    }, { onConflict: 'id' });
+
+    const { data: listing, error: le } = await db.from('listings').insert({
+      user_id: user.id, title, price, city,
+      brand: v('f_b') || null,
+      color: v('f_c') || null,
+      width_cm: mainBr,
+      depth_cm: mainD,
+      height_cm: afmData.hoogte,
+      afmetingen: JSON.stringify(afmData),
+      description: v('f_desc') || null,
+      keuken_type: chipVal('keuken_type'),
+      conditie: chipVal('conditie'),
+      materiaal_blad: chipVal('materiaal_blad'),
+      leeftijd_jaar: parseInt(v('f_age')) || null,
+      apparatuur: checkedApp.length ? JSON.stringify(checkedApp) : null,
+      demontage: chipVal('demontage'),
+      ophalen_bezorgen: chipVal('ophalen_bezorgen'),
+      incl_bovenkasten: isOn('tgl_boven'),
+      incl_spoelbak: isOn('tgl_spoelbak'),
+    }).select().single();
+    if (le) throw le;
+
+    // Foto's uploaden
+    for (let i = 0; i < pendingPhotos.length; i++) {
+      const { file } = pendingPhotos[i];
+      const ext = file.name.split('.').pop();
+      const path = `${listing.id}/${i}-${Date.now()}.${ext}`;
+      const { error: ue } = await db.storage.from('photos').upload(path, file, { cacheControl: '3600' });
+      if (ue) throw ue;
+      const { data: { publicUrl } } = db.storage.from('photos').getPublicUrl(path);
+      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: i, foto_type: 'foto' });
+    }
+
+    // Tekeningen uploaden
+    for (let i = 0; i < pendingTekeningen.length; i++) {
+      const { file } = pendingTekeningen[i];
+      const ext = file.name.split('.').pop();
+      const path = `${listing.id}/tek-${i}-${Date.now()}.${ext}`;
+      const { error: ue } = await db.storage.from('photos').upload(path, file, { cacheControl: '3600' });
+      if (ue) throw ue;
+      const { data: { publicUrl } } = db.storage.from('photos').getPublicUrl(path);
+      await db.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl, order_index: 100 + i, foto_type: 'tekening' });
+    }
+
+    go(`k/${listing.id}`);
+  } catch (e) {
+    fa.innerHTML = err(e.message);
+    fa.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sb.disabled = false;
+    sb.innerHTML = 'Advertentie plaatsen →';
+  }
+};
+
+// ── LOGIN / REGISTER ──────────────────────────────────────
+async function pageLogin(el) {
+  if (user) { go(''); return; }
+  let tab = 'login';
+
+  const draw = () => {
+    el.innerHTML = `<div class="page-narrow"><div class="card">
+      <div class="tabs">
+        <div class="tab${tab==='login'?' active':''}" onclick="setTab('login')">Inloggen</div>
+        <div class="tab${tab==='register'?' active':''}" onclick="setTab('register')">Registreren</div>
+      </div>
+      <div id="aa"></div>
+      ${tab==='register' ? `<div class="fg"><label class="fl">Naam</label><input id="a_n" class="fi" placeholder="Jouw naam"></div>` : ''}
+      <div class="fg"><label class="fl">E-mailadres</label><input id="a_e" class="fi" type="email" placeholder="jij@email.nl"></div>
+      <div class="fg"><label class="fl">Wachtwoord</label><input id="a_p" class="fi" type="password" placeholder="${tab==='register'?'Minimaal 8 tekens':''}"></div>
+      ${tab==='register' ? `<div class="fg"><label class="fl">Ik ben een…</label>
+        <div class="role-grid">
+          <div class="role-opt sel" data-r="koper" onclick="selRole(this)"><div class="ri">🛍️</div><div class="rl">Koper</div></div>
+          <div class="role-opt" data-r="aanbieder" onclick="selRole(this)"><div class="ri">🏠</div><div class="rl">Aanbieder</div></div>
+          <div class="role-opt" data-r="monteur" onclick="selRole(this)"><div class="ri">🔧</div><div class="rl">Monteur</div></div>
+        </div>
+      </div>` : ''}
+      <button class="submit-btn" id="ab" onclick="doAuth('${tab}')">
+        ${tab==='login' ? 'Inloggen' : 'Account aanmaken'}
+      </button>
+    </div></div>`;
+  };
+
+  window.setTab = t => { tab = t; draw(); };
+  window.selRole = el => {
+    document.querySelectorAll('.role-opt').forEach(r => r.classList.remove('sel'));
+    el.classList.add('sel');
+  };
+  window.doAuth = async mode => {
+    const email = v('a_e'), pw = v('a_p'), aa = document.getElementById('aa');
+    if (!email || !pw) { aa.innerHTML = err('Vul alle velden in.'); return; }
+    const ab = document.getElementById('ab');
+    ab.disabled = true; aa.innerHTML = '';
+    try {
+      if (mode === 'login') {
+        const { error: e } = await db.auth.signInWithPassword({ email, password: pw });
+        if (e) throw e;
+        go('');
+      } else {
+        const name = v('a_n') || '';
+        const role = document.querySelector('.role-opt.sel')?.dataset?.r || 'koper';
+        const { data, error: e } = await db.auth.signUp({ email, password: pw, options: { data: { name } } });
+        if (e) throw e;
+        if (data.user) {
+          await db.from('profiles').upsert({ id: data.user.id, name, role });
+          go('');
+        } else {
+          aa.innerHTML = `<div class="alert alert-ok">✅ Bevestig je account via de e-mail die we je gestuurd hebben, dan kun je inloggen.</div>`;
+          tab = 'login'; draw();
+        }
+      }
+    } catch (e) { aa.innerHTML = err(e.message); ab.disabled = false; }
+  };
+
+  draw();
+}
+
+// ── MIJN ACCOUNT ──────────────────────────────────────────
+async function pageMijn(el) {
+  if (!user) { go('login'); return; }
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  el.innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div>
+        <h1 style="font-size:22px;font-weight:800">Mijn account</h1>
+        <div style="font-size:14px;color:var(--gray-4);margin-top:2px">${esc(user.email)}</div>
+      </div>
+      <button class="btn btn-ghost" onclick="uitloggen()">Uitloggen</button>
+    </div>
+
+    <div class="card" style="margin-bottom:28px">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px">Contactgegevens</h2>
+      <div id="profile-alert"></div>
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">WhatsApp nummer</label>
+          <input id="p_phone" class="fi" placeholder="0612345678" value="${esc(profile?.phone || '')}">
+        </div>
+        <div class="fg">
+          <label class="fl">Contact e-mailadres</label>
+          <input id="p_email" class="fi" type="email" placeholder="jij@email.nl" value="${esc(profile?.contact_email || '')}">
+        </div>
+      </div>
+      ${profile?.role === 'monteur' ? `
+      <div class="divider"></div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px">🔧 Monteursprofiel</div>
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Werkgebied</label>
+          <input id="p_regio" class="fi" placeholder="Bijv: Noord-Holland, Utrecht" value="${esc(profile?.regio || '')}">
+        </div>
+        <div class="fg">
+          <label class="fl">Richtprijs plaatsing (€)</label>
+          <input id="p_richtprijs" class="fi" type="number" placeholder="450" value="${profile?.richtprijs || ''}">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Korte omschrijving</label>
+        <textarea id="p_bio" class="ft" style="min-height:70px" placeholder="Bijv: 10 jaar ervaring, inclusief demontage en transport">${esc(profile?.bio || '')}</textarea>
+      </div>` : ''}
+      <button class="btn btn-primary" onclick="saveProfile()">Opslaan</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="font-size:17px;font-weight:700">Mijn advertenties</h2>
+      <button class="btn btn-primary" onclick="go('aanbieden')">+ Toevoegen</button>
+    </div>
+    ${!data?.length ? `<div class="empty">
+      <div class="empty-icon">📦</div>
+      <div class="empty-title">Nog geen advertenties</div>
+      <div class="empty-text">Bied je eerste keuken aan en bereik kopers door heel Nederland.</div>
+    </div>` : data.map(l => {
+      const img = sort(l.listing_photos)[0]?.url;
+      return `<div class="my-item">
+        <div class="my-thumb">${img ? `<img src="${img}" alt="">` : '🍳'}</div>
+        <div class="my-body">
+          <div class="my-title">${esc(l.title)}</div>
+          <div class="my-meta">€${l.price.toLocaleString('nl')} · ${esc(l.city || '')} · ${fmtDate(l.created_at)}</div>
+          <div class="my-actions">
+            <span class="status-badge s-${l.status}">${l.status}</span>
+            <button class="btn btn-ghost btn-sm" onclick="go('k/${l.id}')">Bekijken</button>
+            <button class="btn btn-danger btn-sm" onclick="delListing('${l.id}')">Verwijderen</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+window.saveProfile = async () => {
+  const phone = document.getElementById('p_phone')?.value?.trim() || null;
+  const contact_email = document.getElementById('p_email')?.value?.trim() || null;
+  const regio = document.getElementById('p_regio')?.value?.trim() || null;
+  const richtprijs = parseInt(document.getElementById('p_richtprijs')?.value) || null;
+  const bio = document.getElementById('p_bio')?.value?.trim() || null;
+  const al = document.getElementById('profile-alert');
+  const updates = { phone, contact_email, regio, richtprijs, bio };
+  const { error } = await db.from('profiles').update(updates).eq('id', user.id);
+  if (error) { al.innerHTML = `<div class="alert alert-err">⚠️ ${error.message}</div>`; return; }
+  profile = { ...profile, ...updates };
+  al.innerHTML = `<div class="alert alert-ok">✅ Opgeslagen!</div>`;
+  setTimeout(() => { al.innerHTML = ''; }, 3000);
+};
+
+window.uitloggen = async () => {
+  await db.auth.signOut();
+  user = null; profile = null;
+  go('');
+};
+window.delListing = async id => {
+  if (!confirm('Weet je zeker dat je deze advertentie wilt verwijderen?')) return;
+  await db.from('listings').delete().eq('id', id);
+  go('mijn');
+};
+
+// ── MONTEUR ───────────────────────────────────────────────
+async function pageMonteur(el) {
+  if (!user) { go('login'); return; }
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data: listings } = await db
+    .from('listings')
+    .select('*, listing_photos(url, order_index)')
+    .eq('status', 'actief')
+    .order('created_at', { ascending: false });
+
+  const { data: mijnOffertes } = await db
+    .from('offertes')
+    .select('listing_id, prijs')
+    .eq('monteur_id', user.id);
+
+  const offertesMap = {};
+  (mijnOffertes || []).forEach(o => offertesMap[o.listing_id] = o.prijs);
+
+  el.innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h1 style="font-size:22px;font-weight:800">Beschikbare keukens</h1>
+    </div>
+    <p style="font-size:14px;color:var(--gray-4);margin-bottom:24px">Geef een offerte op keukens die je wilt plaatsen. Kopers zien jouw prijs direct op de advertentiepagina.</p>
+
+    ${!listings?.length ? `<div class="empty">
+      <div class="empty-icon">🍳</div>
+      <div class="empty-title">Nog geen keukens</div>
+    </div>` : listings.map(l => {
+      const img = sort(l.listing_photos)[0]?.url;
+      const heeftOfferte = offertesMap[l.id] !== undefined;
+      return `<div class="my-item">
+        <div class="my-thumb" style="cursor:pointer" onclick="go('k/${l.id}')">${img ? `<img src="${img}" alt="">` : '🍳'}</div>
+        <div class="my-body">
+          <div class="my-title" style="cursor:pointer" onclick="go('k/${l.id}')">${esc(l.title)}</div>
+          <div class="my-meta">€${l.price.toLocaleString('nl')} · 📍 ${esc(l.city || '')}${l.width_cm ? ` · ${l.width_cm}cm breed` : ''}</div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${heeftOfferte
+              ? `<span style="font-size:13px;font-weight:700;color:#16a34a">✅ Jouw offerte: €${offertesMap[l.id].toLocaleString('nl')}</span>
+                 <button class="btn btn-ghost btn-sm" onclick="openOfferte('${l.id}', ${offertesMap[l.id]})">Wijzigen</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="openOfferte('${l.id}', null)">+ Offerte geven</button>`
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Offerte modal -->
+  <div id="offerteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+      <h3 style="font-size:18px;font-weight:800;margin-bottom:6px">Offerte geven</h3>
+      <p style="font-size:13px;color:var(--gray-4);margin-bottom:20px">Je prijs is zichtbaar voor de koper. Voeg voorbehouden toe als je nog niet zeker bent.</p>
+      <div id="om-alert"></div>
+      <div class="fg"><label class="fl">Jouw prijs (€)</label>
+        <input id="om_prijs" class="fi" type="number" placeholder="450"></div>
+      <div class="fg"><label class="fl">Voorbehouden <span style="font-weight:400;text-transform:none;letter-spacing:0">(optioneel)</span></label>
+        <textarea id="om_vb" class="ft" style="min-height:70px" placeholder="Bijv: mits keuken compleet is en aansluitingen kloppen. Voorinspectie mogelijk voor €75."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeOfferte()">Annuleren</button>
+        <button class="btn btn-primary" style="flex:2" onclick="submitOfferte()">Offerte plaatsen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let activeListing = null;
+window.openOfferte = (listingId, huidigePrijs) => {
+  activeListing = listingId;
+  document.getElementById('om_prijs').value = huidigePrijs || '';
+  document.getElementById('om_vb').value = '';
+  document.getElementById('om-alert').innerHTML = '';
+  const modal = document.getElementById('offerteModal');
+  modal.style.display = 'flex';
+};
+window.closeOfferte = () => {
+  document.getElementById('offerteModal').style.display = 'none';
+  activeListing = null;
+};
+window.submitOfferte = async () => {
+  const prijs = parseInt(document.getElementById('om_prijs').value);
+  const voorbehouden = document.getElementById('om_vb').value.trim() || null;
+  const al = document.getElementById('om-alert');
+  if (!prijs || prijs < 1) { al.innerHTML = err('Vul een geldige prijs in.'); return; }
+
+  const { error } = await db.from('offertes').upsert({
+    listing_id: activeListing,
+    monteur_id: user.id,
+    prijs,
+    voorbehouden
+  }, { onConflict: 'listing_id,monteur_id' });
+
+  if (error) { al.innerHTML = err(error.message); return; }
+  closeOfferte();
+  pageMonteur(document.querySelector('main'));
+};
+
+// ── MONTEUR PROFIEL ───────────────────────────────────────
+async function pageMonteurProfiel(el, id) {
+  el.innerHTML = `<div class="spin-wrap"><div class="spin"></div></div>`;
+
+  const { data: m, error } = await db
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !m) {
+    el.innerHTML = `<div class="page">${err('Monteur niet gevonden.')}</div>`;
+    return;
+  }
+
+  const { data: offertes } = await db
+    .from('offertes')
+    .select('prijs, voorbehouden, listings(id, title, price, city)')
+    .eq('monteur_id', id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  // Check of koper al betaald heeft voor deze monteur
+  let contactUnlocked = false;
+  if (user) {
+    if (user.id === id) {
+      contactUnlocked = true; // eigen profiel
+    } else {
+      const { data: payment } = await db.from('payments')
+        .select('id')
+        .eq('buyer_id', user.id)
+        .eq('monteur_id', id)
+        .maybeSingle();
+      contactUnlocked = !!payment;
+    }
+  }
+
+  el.innerHTML = `<div class="page" style="max-width:680px">
+    <button class="back" onclick="history.back()">← Terug</button>
+
+    <!-- Profiel header -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:20px">
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;flex-shrink:0">
+          ${(m.name || '?')[0].toUpperCase()}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:22px;font-weight:800;margin-bottom:4px">${esc(m.name || 'Monteur')}</div>
+          ${m.regio ? `<div style="font-size:14px;color:var(--gray-4);margin-bottom:6px">📍 ${esc(m.regio)}</div>` : ''}
+          ${m.richtprijs ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#F0FFF4;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700">Vanaf €${m.richtprijs}</div>` : ''}
+        </div>
+      </div>
+
+      ${m.bio ? `<div style="font-size:14px;color:var(--gray-5);line-height:1.7;padding-top:16px;border-top:1px solid var(--gray-2)">${esc(m.bio)}</div>` : ''}
+    </div>
+
+    <!-- Contact -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">Contact opnemen</div>
+      ${contactUnlocked ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${m.phone ? `<a href="https://wa.me/${waNum(m.phone)}?text=${encodeURIComponent('Hoi ' + (m.name||'') + ', ik zag je profiel op KitchKitch en wil graag contact.')}" target="_blank" class="btn btn-primary" style="text-decoration:none;background:#25D366">💬 WhatsApp</a>` : ''}
+          ${m.contact_email ? `<a href="mailto:${m.contact_email}" class="btn btn-primary" style="text-decoration:none;background:#1C1C1E">✉️ E-mail</a>` : ''}
+        </div>
+      ` : `
+        <div style="position:relative">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;filter:blur(4px);pointer-events:none;user-select:none">
+            <div class="btn btn-primary" style="background:#25D366">💬 WhatsApp: 06•• •••• ••••</div>
+            <div class="btn btn-primary" style="background:#1C1C1E">✉️ E-mail: ••••@••••.nl</div>
+          </div>
+          <div style="margin-top:12px;padding:14px;background:#FFF7ED;border-radius:10px;border:1.5px solid #FED7AA">
+            <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px">🔒 Contactgegevens zijn vergrendeld</div>
+            <div style="font-size:13px;color:#92400E;margin-bottom:12px">Betaal de eenmalige servicefee van €9,95 om de contactgegevens van deze monteur te zien.</div>
+            <button id="checkout-btn" class="btn btn-primary" style="width:100%;justify-content:center" onclick="startCheckout('${id}')">🔓 Ontgrendel contact — €9,95</button>
+          </div>
+        </div>
+      `}
+    </div>
+
+    <!-- Recente offertes -->
+    ${offertes?.length ? `
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">Recente offertes</div>
+      ${offertes.map(o => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray-2)" onclick="go('k/${o.listings?.id}')" style="cursor:pointer">
+          <div>
+            <div style="font-size:14px;font-weight:600;cursor:pointer;color:var(--accent)" onclick="go('k/${o.listings?.id}')">${esc(o.listings?.title || '')}</div>
+            <div style="font-size:12px;color:var(--gray-4)">📍 ${esc(o.listings?.city || '')} · Keuken €${o.listings?.price?.toLocaleString('nl') || ''}</div>
+            ${o.voorbehouden ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px;font-style:italic">⚠️ ${esc(o.voorbehouden)}</div>` : ''}
+          </div>
+          <div style="font-size:16px;font-weight:800;flex-shrink:0;margin-left:16px">€${o.prijs.toLocaleString('nl')}</div>
+        </div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+// ── STRIPE BETAALFLOW ─────────────────────────────────────
+window.startCheckout = async (monteurId) => {
+  if (!user) { go('login'); return; }
+  const btn = document.getElementById('checkout-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spin" style="width:16px;height:16px;border-width:2px"></div> Laden…`;
+  }
+  try {
+    const res = await fetch(`${SB_URL}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+      },
+      body: JSON.stringify({
+        monteur_id: monteurId,
+        buyer_id: user.id,
+        origin: window.location.origin,
+      }),
+    });
+    const { url, session_id, error } = await res.json();
+    if (error) throw new Error(error);
+    // Sla session_id op voor verificatie na terugkeer
+    sessionStorage.setItem('kk_pending', JSON.stringify({ session_id, monteur_id: monteurId }));
+    window.location.href = url;
+  } catch (e) {
+    alert('Er ging iets mis: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔓 Ontgrendel contact — €9,95'; }
+  }
+};
+
+async function verifyPayment(sessionId, monteurId, buyerId) {
+  try {
+    await fetch(`${SB_URL}/functions/v1/verify-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        monteur_id: monteurId,
+        buyer_id: buyerId,
+      }),
+    });
+  } catch (e) {
+    console.error('Betaling verifiëren mislukt:', e);
+  }
+}
+
+// ── KEUKEN MAATDIAGRAM ────────────────────────────────────
+
+function _svgDefs() {
+  return `<defs>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,1 L6,3.5 L0,6 Z" fill="#888"/>
+    </marker>
+    <marker id="arrl" markerWidth="7" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse">
+      <path d="M0,1 L6,3.5 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>`;
+}
+
+// Horizontale maatpijl
+function _hd(x1, x2, y, val) {
+  const mx = (x1 + x2) / 2, lbl = val ? val + ' cm' : '?';
+  return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#999" stroke-width="1" marker-start="url(#arrl)" marker-end="url(#arr)"/>
+    <rect x="${mx - 19}" y="${y + 2}" width="38" height="13" fill="white"/>
+    <text x="${mx}" y="${y + 12}" text-anchor="middle" font-size="10" fill="#444" font-family="-apple-system,sans-serif" font-weight="600">${lbl}</text>`;
+}
+
+// Verticale maatpijl
+function _vd(y1, y2, x, val) {
+  const my = (y1 + y2) / 2, lbl = val ? val + ' cm' : '?';
+  return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#999" stroke-width="1" marker-start="url(#arrl)" marker-end="url(#arr)"/>
+    <rect x="${x + 3}" y="${my - 7}" width="38" height="13" fill="white"/>
+    <text x="${x + 7}" y="${my + 4}" font-size="10" fill="#444" font-family="-apple-system,sans-serif" font-weight="600">${lbl}</text>`;
+}
+
+// Hulplijnen
+function _eh(x, ya, yb) { return `<line x1="${x}" y1="${ya}" x2="${x}" y2="${yb}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>`; }
+function _ev(y, xa, xb) { return `<line x1="${xa}" y1="${y}" x2="${xb}" y2="${y}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>`; }
+
+const _cab = `fill="#EEF0E8" stroke="#444" stroke-width="2"`;
+
+function _getDims() {
+  const ids = ['f_w','f_d','f_h','f_wand1','f_wand2','f_wl','f_wr','f_wa','f_eibr','f_eid','f_gang'];
+  const d = {};
+  ids.forEach(id => { const el = document.getElementById(id); d[id] = el ? el.value.trim() : ''; });
+  return d;
+}
+
+// Kasttypen met kleur en icoon
+const KAST = [
+  { id:'basis',    lbl:'Basis',       col:'#EEF0E8', brd:'#888', icon:'' },
+  { id:'hoog',     lbl:'Kolomkast',   col:'#D4D8CC', brd:'#666', icon:'║' },
+  { id:'kook',     lbl:'Kookunit',    col:'#FFF0DC', brd:'#D07030', icon:'🔥' },
+  { id:'spoelbak', lbl:'Spoelbak',    col:'#DCF0FF', brd:'#3080C0', icon:'~' },
+  { id:'vaatwas',  lbl:'Vaatwasser',  col:'#EAEAF8', brd:'#6060B0', icon:'≡' },
+  { id:'leeg',     lbl:'Open ruimte', col:'#F8F8F8', brd:'#CCC',    icon:'' },
+];
+
+// Wandconfiguratie per keukentype
+const WALL_CFG = {
+  'Rechte keuken': [{id:'wand1', lbl:'Wand',          dim:'f_w'}],
+  'Hoek':          [{id:'wand1', lbl:'Wand 1 (lang)', dim:'f_wand1'}, {id:'wand2', lbl:'Wand 2 (kort)', dim:'f_wand2'}],
+  'U-vorm':        [{id:'wa',    lbl:'Wand achter',    dim:'f_wa'},   {id:'wl', lbl:'Wand links', dim:'f_wl'}, {id:'wr', lbl:'Wand rechts', dim:'f_wr'}],
+  'Eiland':        [{id:'wand1', lbl:'Aanrecht',       dim:'f_w'},    {id:'eiland', lbl:'Eiland', dim:'f_eibr'}],
+  'Galley':        [{id:'wand1', lbl:'Rij 1',          dim:'f_w'},    {id:'wand2', lbl:'Rij 2', dim:'f_w'}],
+  'Overig':        [{id:'wand1', lbl:'Wand',           dim:'f_w'}],
+};
+
+// Invoervelden per type
+const DIAG_FIELDS = {
+  'Rechte keuken': [{id:'f_w', lbl:'Breedte', ph:'300', hint:'totale lengte'}, {id:'f_d', lbl:'Diepte kasten', ph:'60', hint:'normaal 58–62 cm'}],
+  'Hoek':          [{id:'f_wand1', lbl:'Wand 1 (lang)', ph:'360', hint:'langste wand'}, {id:'f_wand2', lbl:'Wand 2 (kort)', ph:'240'}, {id:'f_d', lbl:'Diepte kasten', ph:'60', hint:'normaal 58–62 cm'}],
+  'U-vorm':        [{id:'f_wa', lbl:'Wand achter', ph:'300'}, {id:'f_wl', lbl:'Wand links', ph:'220'}, {id:'f_wr', lbl:'Wand rechts', ph:'220'}, {id:'f_d', lbl:'Diepte', ph:'60', hint:'normaal 58–62 cm'}],
+  'Eiland':        [{id:'f_w', lbl:'Breedte keuken', ph:'300'}, {id:'f_d', lbl:'Diepte keuken', ph:'60'}, {id:'f_eibr', lbl:'Breedte eiland', ph:'150'}, {id:'f_eid', lbl:'Diepte eiland', ph:'90'}, {id:'f_gang', lbl:'Gangpad', ph:'120', hint:'ruimte keuken–eiland'}],
+  'Galley':        [{id:'f_w', lbl:'Breedte', ph:'300'}, {id:'f_d', lbl:'Diepte rij 1', ph:'60'}, {id:'f_eid', lbl:'Diepte rij 2', ph:'60'}, {id:'f_gang', lbl:'Gangpad', ph:'120', hint:'ruimte tussen de rijen'}],
+  'Overig':        [{id:'f_w', lbl:'Breedte', ph:'300'}, {id:'f_d', lbl:'Diepte', ph:'60'}],
+};
+
+// Plattegrond-iconen per kasttype (plan view)
+function _kastPlanIcon(typeId, rx, ry, rw, rh) {
+  const cx = rx+rw/2, cy = ry+rh/2;
+  const p = Math.min(rw,rh)*0.16;
+  if (typeId==='spoelbak') {
+    const bp = Math.min(rw,rh)*0.13;
+    const sw = Math.max(0.6, Math.min(rw,rh)*0.045);
+    return `<rect x="${rx+bp}" y="${ry+bp}" width="${rw-bp*2}" height="${rh-bp*2}" fill="none" stroke="#3080C0" stroke-width="${sw}" rx="1.5"/>`
+      +`<circle cx="${cx}" cy="${cy}" r="${Math.max(1.2, Math.min(rw,rh)*0.1)}" fill="none" stroke="#3080C0" stroke-width="${sw*0.8}"/>`;
+  }
+  if (typeId==='kook') {
+    const r = Math.max(2, Math.min(rw,rh)*0.14);
+    if (rw<20||rh<20) return `<circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="none" stroke="#D07030" stroke-width="0.9"/>`;
+    const ox=rw*0.24, oy=rh*0.24;
+    return [[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx,dy])=>
+      `<circle cx="${cx+dx*ox}" cy="${cy+dy*oy}" r="${r}" fill="none" stroke="#D07030" stroke-width="0.9"/>`
+    ).join('');
+  }
+  if (typeId==='vaatwas') {
+    return `<line x1="${rx+p}" y1="${ry+rh-p}" x2="${rx+rw-p}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`
+      +`<line x1="${rx+p}" y1="${ry+rh*0.55}" x2="${rx+rw*0.55}" y2="${ry+p}" stroke="#6060B0" stroke-width="1"/>`;
+  }
+  if (typeId==='hoog') {
+    return (rh>rw)
+      ? `<line x1="${cx}" y1="${ry+p}" x2="${cx}" y2="${ry+rh-p}" stroke="#777" stroke-width="0.9"/>`
+      : `<line x1="${rx+p}" y1="${cy}" x2="${rx+rw-p}" y2="${cy}" stroke="#777" stroke-width="0.9"/>`;
+  }
+  return '';
+}
+
+// SVG kastelementen — proportionele segmenten per wand
+function _wallSegs(wall, x0, y0, lenPx, depPx, vertical) {
+  lenPx = Math.max(1, lenPx);
+  depPx = Math.max(1, depPx);
+
+  // Achterwand: dikke lijn
+  const wallLine = vertical
+    ? `<line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0+lenPx}" stroke="#555" stroke-width="3" stroke-linecap="square"/>`
+    : `<line x1="${x0}" y1="${y0}" x2="${x0+lenPx}" y2="${y0}" stroke="#555" stroke-width="3" stroke-linecap="square"/>`;
+
+  // Aanrechtblad: lijn aan voorkant, iets uitspringend
+  const ov = 1.5;
+  const ctLine = vertical
+    ? `<line x1="${x0+depPx+ov}" y1="${y0}" x2="${x0+depPx+ov}" y2="${y0+lenPx}" stroke="#C8A070" stroke-width="2.5" stroke-linecap="square"/>`
+    : `<line x1="${x0}" y1="${y0+depPx+ov}" x2="${x0+lenPx}" y2="${y0+depPx+ov}" stroke="#C8A070" stroke-width="2.5" stroke-linecap="square"/>`;
+
+  const segs = (kastData||{})[wall];
+  let cabSvg;
+  if (!segs || !segs.length) {
+    cabSvg = `<rect x="${x0}" y="${y0}" width="${vertical?depPx:lenPx}" height="${vertical?lenPx:depPx}" fill="#EEF0E8" stroke="none"/>`;
+  } else {
+    const totCm = segs.reduce((s,k) => s + (k.breedte||60), 0) || 1;
+    let off = 0;
+    cabSvg = segs.map((k, i) => {
+      const segPx = (k.breedte / totCm) * lenPx;
+      const kt = KAST.find(t => t.id === k.type) || KAST[0];
+      const rx = vertical ? x0 : x0+off, ry = vertical ? y0+off : y0;
+      const rw = vertical ? depPx : segPx, rh = vertical ? segPx : depPx;
+      off += segPx;
+      return `<g onclick="cycleKast('${wall}',${i})" style="cursor:pointer" title="${kt.lbl}">
+        <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${kt.col}" stroke="${kt.brd}" stroke-width="0.5" rx="0.5"/>
+        ${_kastPlanIcon(kt.id, rx, ry, rw, rh)}
+      </g>`;
+    }).join('');
+  }
+  return wallLine + cabSvg + ctLine;
+}
+
+// Proportionele SVG per keukentype
+function keukenSVG(type, dims, kData) {
+  const _kd = kData || kastData;
+  const n = id => parseInt(dims[id]) || 0;
+  const M = 44, MW = 226, MH = 164;
+
+  switch (type) {
+    case 'Rechte keuken': {
+      const W=n('f_w')||300, D=n('f_d')||60, s=Math.min(MW/W,MH/D), w=W*s, d=D*s;
+      const VW=M+w+50, VH=M+d+42;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wand1',M,M,w,d,false)}
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
+        ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
+      </svg>`;
+    }
+    case 'Hoek': {
+      const W1=n('f_wand1')||360, W2=n('f_wand2')||240, D=n('f_d')||60;
+      const s=Math.min(MW/W1,MH/W2), w1=W1*s, w2=W2*s, d=Math.min(D*s, w1-1, w2-1);
+      const VW=M+w1+50, VH=M+w2+40;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:260px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wand1',M,M+w2-d,w1,d,false)}
+        ${_wallSegs('wand2',M,M,d,w2-d,true)}
+        <polygon points="${M},${M} ${M+d},${M} ${M+d},${M+w2-d} ${M+w1},${M+w2-d} ${M+w1},${M+w2} ${M},${M+w2}" fill="none" stroke="#CCC" stroke-width="0.7"/>
+        ${_eh(M,M+w2,VH-10)} ${_eh(M+w1,M+w2,VH-10)} ${_hd(M,M+w1,VH-12,n('f_wand1'))}
+        ${_ev(M,Math.max(1,M-22),M-1)} ${_ev(M+w2,Math.max(1,M-22),M-1)} ${_vd(M,M+w2,Math.max(1,M-24),n('f_wand2'))}
+        ${_ev(M+w2-d,M+w1+10,M+w1+36)} ${_ev(M+w2,M+w1+10,M+w1+36)} ${_vd(M+w2-d,M+w2,M+w1+24,n('f_d'))}
+      </svg>`;
+    }
+    case 'U-vorm': {
+      const WA=n('f_wa')||300, WL=n('f_wl')||220, WR=n('f_wr')||220, D=n('f_d')||60;
+      const s=Math.min(MW/WA,MH/Math.max(WL,WR)), wa=WA*s, wl=WL*s, wr=WR*s, d=Math.min(D*s, wa/2-1, wl-1, wr-1);
+      const VW=M+wa+50, VH=M+Math.max(wl,wr)+34;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wa',M,M,wa,d,false)}
+        ${_wallSegs('wl',M,M+d,d,wl-d,true)}
+        ${_wallSegs('wr',M+wa-d,M+d,d,wr-d,true)}
+        <polygon points="${M},${M} ${M+wa},${M} ${M+wa},${M+wr} ${M+wa-d},${M+wr} ${M+wa-d},${M+d} ${M+d},${M+d} ${M+d},${M+wl} ${M},${M+wl}" fill="none" stroke="#CCC" stroke-width="0.7"/>
+        ${_eh(M,M,Math.max(1,M-22))} ${_eh(M+wa,M,Math.max(1,M-22))} ${_hd(M,M+wa,Math.max(4,M-25),n('f_wa'))}
+        ${_ev(M,Math.max(1,M-22),M-1)} ${_ev(M+wl,Math.max(1,M-22),M-1)} ${_vd(M,M+wl,Math.max(1,M-24),n('f_wl'))}
+        ${_ev(M,M+wa+10,M+wa+36)} ${_ev(M+wr,M+wa+10,M+wa+36)} ${_vd(M,M+wr,M+wa+24,n('f_wr'))}
+      </svg>`;
+    }
+    case 'Eiland': {
+      const W=n('f_w')||300, D=n('f_d')||60, EBR=n('f_eibr')||150, ED=n('f_eid')||90, GANG=n('f_gang')||120;
+      const totH=D+GANG+ED, s=Math.min(MW/W,MH/totH), w=W*s, d=D*s, ebr=EBR*s, ed=ED*s, gang=GANG*s;
+      const VW=M+w+24, VH=M+totH*s+38, ex=M+(w-ebr)/2;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wand1',M,M,w,d,false)}
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_wallSegs('eiland',ex,M+d+gang,ebr,ed,false)}
+        <rect x="${ex}" y="${M+d+gang}" width="${ebr}" height="${ed}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_eh(M,M+totH*s,VH-10)} ${_eh(M+w,M+totH*s,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
+        <line x1="${M+w+8}" y1="${M+d}" x2="${M+w+8}" y2="${M+d+gang}" stroke="#CCC" stroke-width="0.8" stroke-dasharray="3,2"/>
+        <rect x="${M+w+11}" y="${M+d+gang/2-6}" width="28" height="12" fill="white"/>
+        <text x="${M+w+13}" y="${M+d+gang/2+3}" font-size="9" fill="#888" font-family="sans-serif" font-weight="600">${n('f_gang')?n('f_gang')+'cm':'?'}</text>
+      </svg>`;
+    }
+    case 'Galley': {
+      const W=n('f_w')||300, D1=n('f_d')||60, D2=n('f_eid')||60, GANG=n('f_gang')||120;
+      const totH=D1+GANG+D2, s=Math.min(MW/W,MH/totH), w=W*s, d1=D1*s, d2=D2*s, gang=GANG*s;
+      const VW=M+w+50, VH=M+totH*s+36;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:280px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wand1',M,M,w,d1,false)}
+        <rect x="${M}" y="${M}" width="${w}" height="${d1}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_wallSegs('wand2',M,M+d1+gang,w,d2,false)}
+        <rect x="${M}" y="${M+d1+gang}" width="${w}" height="${d2}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_eh(M,M,VH-10)} ${_eh(M+w,M,VH-10)} ${_hd(M,M+w,VH-12,n('f_w'))}
+        ${_ev(M+d1,M+w+10,M+w+36)} ${_ev(M+d1+gang,M+w+10,M+w+36)} ${_vd(M+d1,M+d1+gang,M+w+24,n('f_gang'))}
+      </svg>`;
+    }
+    default: {
+      const W=n('f_w')||300, D=n('f_d')||60, s=Math.min(MW/W,MH/D), w=W*s, d=D*s;
+      const VW=M+w+50, VH=M+d+42;
+      return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;max-height:200px" xmlns="http://www.w3.org/2000/svg">${_svgDefs()}
+        ${_wallSegs('wand1',M,M,w,d,false)}
+        <rect x="${M}" y="${M}" width="${w}" height="${d}" fill="none" stroke="#CCC" stroke-width="0.7" rx="1"/>
+        ${_eh(M,M,M+d+16)} ${_eh(M+w,M,M+d+16)} ${_hd(M,M+w,M+d+13,n('f_w'))}
+        ${_ev(M,M+w+10,M+w+38)} ${_ev(M+d,M+w+10,M+w+38)} ${_vd(M,M+d,M+w+25,n('f_d'))}
+      </svg>`;
+    }
+  }
+}
+
+function renderAfmetingen(type) {
+  const wrap = document.getElementById('afm-wrap');
+  if (!wrap) return;
+  const fields = DIAG_FIELDS[type] || DIAG_FIELDS['Rechte keuken'];
+  const d = _getDims();
+
+  wrap.innerHTML = `
+    <div style="background:#FAFAF8;border:1px solid var(--gray-2);border-radius:var(--r-sm);padding:8px 8px 4px;margin-bottom:14px;overflow:hidden">
+      <div id="afm-svg">${keukenSVG(type, d, kastData)}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${fields.length > 3 ? 3 : Math.min(fields.length,2)},1fr);gap:10px 14px;margin-bottom:18px">
+      ${fields.map(f => `
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">${f.lbl} (cm)</label>
+          <input id="${f.id}" class="fi" type="number" placeholder="${f.ph}" min="0" oninput="updateDiagram('${type}')">
+          ${f.hint ? `<div style="font-size:11px;color:var(--gray-4);margin-top:3px">${f.hint}</div>` : ''}
+        </div>`).join('')}
+    </div>
+    <div id="kast-editor"></div>`;
+
+  // Bestaande waarden herstellen
+  fields.forEach(f => { const el = document.getElementById(f.id); if (el && d[f.id]) el.value = d[f.id]; });
+  const svgEl = document.getElementById('afm-svg');
+  if (svgEl) svgEl.innerHTML = keukenSVG(type, _getDims(), kastData);
+  renderKastEditor(type);
+}
+
+function renderKastEditor(type) {
+  const el = document.getElementById('kast-editor');
+  if (!el) return;
+  const walls = WALL_CFG[type] || WALL_CFG['Rechte keuken'];
+  const d = _getDims();
+
+  el.innerHTML = `<div style="border-top:1px solid var(--gray-2);padding-top:16px">
+    <div class="form-card-title" style="margin-bottom:12px">🗂️ Kastindeling <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--gray-4)">— klik op een kast om het type te wijzigen</span></div>
+    ${walls.map(w => {
+      const totalCm = parseInt(d[w.dim]) || 0;
+      const segs = kastData[w.id] || [];
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--gray-5)">${w.lbl}${totalCm?' — '+totalCm+' cm':''}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <button onclick="adjKasten('${w.id}','${type}',-1)" class="btn btn-ghost btn-sm" style="padding:1px 9px;font-size:16px">−</button>
+            <span style="font-size:13px;font-weight:700;min-width:22px;text-align:center">${segs.length||'—'}</span>
+            <button onclick="adjKasten('${w.id}','${type}',1)" class="btn btn-ghost btn-sm" style="padding:1px 9px;font-size:16px">+</button>
+          </div>
+        </div>
+        ${segs.length ? `
+          <div class="kast-row" style="margin-bottom:3px">
+            ${segs.map((k, i) => {
+              const kt = KAST.find(t => t.id === k.type) || KAST[0];
+              const wpx = totalCm ? Math.max(24, (k.breedte / totalCm) * 220) : 40;
+              return `<button class="kast-seg" onclick="cycleKast('${w.id}',${i},'${type}')"
+                style="background:${kt.col};border-color:${kt.brd};width:${wpx}px" title="${kt.lbl} · ${k.breedte}cm">
+                <span style="pointer-events:none;font-size:11px">${kt.icon||''}</span>
+              </button>`;
+            }).join('')}
+          </div>
+          <div style="display:flex;gap:3px;margin-bottom:8px;overflow-x:auto">
+            ${segs.map((k, i) => {
+              const wpx = totalCm ? Math.max(28, (k.breedte / totalCm) * 220) : 40;
+              return `<input type="number" value="${k.breedte}" min="10" max="500"
+                style="width:${wpx}px;min-width:28px;padding:2px 3px;font-size:10px;text-align:center;
+                       border:1px solid var(--gray-2);border-radius:4px;font-weight:600;color:var(--gray-5);
+                       background:white;flex-shrink:0"
+                oninput="setKastBr('${w.id}',${i},'${type}',this.value)"
+                onblur="refreshKastEditor('${type}')"
+                title="Breedte kast ${i+1} (cm)">`;
+            }).join('')}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px">
+            ${KAST.map(k => `<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gray-5)">
+              <span style="width:11px;height:11px;border-radius:2px;background:${k.col};border:1px solid ${k.brd};display:inline-block;flex-shrink:0"></span>${k.lbl}
+            </span>`).join('')}
+          </div>` :
+          `<div style="font-size:12px;color:var(--gray-4);font-style:italic">Gebruik + om kasten toe te voegen</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+window.adjKasten = (wall, type, delta) => {
+  const walls = WALL_CFG[type] || WALL_CFG['Rechte keuken'];
+  const wc = walls.find(w => w.id === wall);
+  const totalCm = parseInt(_getDims()[wc?.dim]) || 300;
+  if (!kastData[wall]) kastData[wall] = [];
+  const newLen = kastData[wall].length + delta;
+  if (newLen < 0 || newLen > 25) return;
+  if (delta > 0) {
+    const br = Math.round(totalCm / (newLen));
+    kastData[wall].push({ type:'basis', breedte: br });
+  } else {
+    kastData[wall].pop();
+  }
+  updateDiagram(type);
+  renderKastEditor(type);
+};
+
+window.cycleKast = (wall, idx, type) => {
+  if (!kastData[wall]?.[idx]) return;
+  const types = KAST.map(k => k.id);
+  const cur = kastData[wall][idx].type;
+  kastData[wall][idx].type = types[(types.indexOf(cur) + 1) % types.length];
+  const t = type || document.querySelector('.chip[data-group="keuken_type"].sel')?.getAttribute('data-val') || 'Rechte keuken';
+  updateDiagram(t);
+  renderKastEditor(t);
+};
+
+window.updateDiagram = type => {
+  const el = document.getElementById('afm-svg');
+  if (el) el.innerHTML = keukenSVG(type, _getDims(), kastData);
+};
+
+// Individuele kastbreedte aanpassen (oninput → SVG hertekenenen, onblur → kastEditor vernieuwen)
+window.setKastBr = (wall, idx, type, val) => {
+  const n = Math.max(10, parseInt(val) || 10);
+  if (!kastData[wall]?.[idx]) return;
+  kastData[wall][idx].breedte = n;
+  updateDiagram(type);
+};
+
+window.refreshKastEditor = type => {
+  const t = type || document.querySelector('.chip[data-group="keuken_type"].sel')?.getAttribute('data-val') || 'Rechte keuken';
+  renderKastEditor(t);
+};
+
+// ── HELPERS ───────────────────────────────────────────────
+const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+const v   = id => document.getElementById(id)?.value?.trim() || '';
+const err = msg => `<div class="alert alert-err">⚠️ ${msg}</div>`;
+const sort = arr => (arr || []).slice().sort((a,b) => a.order_index - b.order_index);
+const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) : '';
+
+router();
+</script>
+</body>
+</html>
