@@ -768,40 +768,13 @@ async function pageHome(el) {
         <div class="waarom-row flip">
           <div class="waarom-ill">
             <svg width="200" height="220" viewBox="0 0 200 220" fill="none" aria-hidden="true" style="max-width:200px">
-              <style>.ballon-anim{animation:waarom-float 3s ease-in-out infinite;transform-origin:128px 160px}@keyframes waarom-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}</style>
-              <!-- ballon -->
-              <g class="ballon-anim">
-                <path d="M128 108 C126 122 130 136 128 148" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>
-                <ellipse cx="128" cy="72" rx="24" ry="30" fill="#FF6B35" stroke="#111" stroke-width="2.5"/>
-                <ellipse cx="119" cy="58" rx="6" ry="8" fill="rgba(255,255,255,0.25)"/>
-                <path d="M123 104 Q128 110 133 104" stroke="#111" stroke-width="2" fill="#FF6B35" stroke-linecap="round"/>
-                <circle cx="128" cy="106" r="2.5" fill="#FF6B35" stroke="#111" stroke-width="2"/>
-                <path d="M108 63 Q128 55 148 63" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none"/>
-                <path d="M106 77 Q128 68 150 77" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none"/>
+              <style>.tag-sway{animation:tag-swing 3s ease-in-out infinite;transform-origin:100px 30px}@keyframes tag-swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}</style>
+              <path d="M100 30 C98 50 104 70 100 90" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+              <g class="tag-sway">
+                <path d="M52 90 L52 190 Q52 198 60 198 L140 198 Q148 198 148 190 L148 90 L100 68 Z" fill="#FFFDE7" stroke="#111" stroke-width="2.5"/>
+                <path d="M52 90 L100 68 L148 90" fill="#FFF9C4" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/>
+                <circle cx="100" cy="86" r="6" fill="white" stroke="#111" stroke-width="2"/>
               </g>
-              <!-- taart onderste laag -->
-              <rect x="18" y="158" width="96" height="32" rx="4" fill="#FFCC80" stroke="#111" stroke-width="2.5"/>
-              <ellipse cx="66" cy="158" rx="48" ry="10" fill="#FFB74D" stroke="#111" stroke-width="2.5"/>
-              <path d="M18 164 Q43 158 66 164 Q89 170 114 164" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
-              <!-- taart bovenste laag -->
-              <rect x="32" y="126" width="68" height="34" rx="4" fill="#FF8C5A" stroke="#111" stroke-width="2.5"/>
-              <ellipse cx="66" cy="126" rx="34" ry="9" fill="#FF6B35" stroke="#111" stroke-width="2.5"/>
-              <path d="M32 133 Q50 127 66 133 Q82 139 100 133" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
-              <!-- slagroom -->
-              <path d="M50 126 Q54 112 58 118 Q62 106 66 114 Q70 102 74 110 Q78 118 82 126Z" fill="white" stroke="#111" stroke-width="2"/>
-              <!-- kaarsjes -->
-              <rect x="52" y="108" width="5" height="16" rx="2" fill="#FDD835" stroke="#111" stroke-width="1.8"/>
-              <rect x="64" y="104" width="5" height="20" rx="2" fill="#FF6B35" stroke="#111" stroke-width="1.8"/>
-              <rect x="76" y="108" width="5" height="16" rx="2" fill="#66BB6A" stroke="#111" stroke-width="1.8"/>
-              <path d="M52 108 Q54 102 56 108" fill="#FDD835" stroke="#111" stroke-width="1.2"/>
-              <path d="M64 104 Q66 97 68 104" fill="#FF8C5A" stroke="#111" stroke-width="1.2"/>
-              <path d="M76 108 Q78 102 80 108" fill="#FDD835" stroke="#111" stroke-width="1.2"/>
-              <!-- stipjes -->
-              <circle cx="43" cy="148" r="3" fill="#FF6B35" stroke="#111" stroke-width="1.2"/>
-              <circle cx="66" cy="152" r="3" fill="#66BB6A" stroke="#111" stroke-width="1.2"/>
-              <circle cx="89" cy="148" r="3" fill="#FDD835" stroke="#111" stroke-width="1.2"/>
-              <circle cx="46" cy="170" r="3" fill="#66BB6A" stroke="#111" stroke-width="1.2"/>
-              <circle cx="86" cy="172" r="3" fill="#FF6B35" stroke="#111" stroke-width="1.2"/>
             </svg>
           </div>
           <div class="waarom-txt">
