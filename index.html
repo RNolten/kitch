@@ -1769,11 +1769,11 @@ async function pageAanbieden(el) {
       <div class="form-card-title">🗄️ Kasten</div>
       <div class="row3">
         <div class="fg"><label class="fl">Onderkasten</label>
-          <input id="f_kasten_onder" class="fi" type="number" placeholder="8" min="0" oninput="updateAutoSummary()"></div>
+          <input id="f_kasten_onder" class="fi" type="number" placeholder="8" min="0" oninput="updateAutoSummary();updateCompletenessBar()"></div>
         <div class="fg"><label class="fl">Bovenkasten</label>
-          <input id="f_kasten_boven" class="fi" type="number" placeholder="6" min="0" oninput="updateAutoSummary()"></div>
+          <input id="f_kasten_boven" class="fi" type="number" placeholder="6" min="0" oninput="updateAutoSummary();updateCompletenessBar()"></div>
         <div class="fg"><label class="fl">Hoge kasten</label>
-          <input id="f_kasten_hoog" class="fi" type="number" placeholder="2" min="0" oninput="updateAutoSummary()"></div>
+          <input id="f_kasten_hoog" class="fi" type="number" placeholder="2" min="0" oninput="updateAutoSummary();updateCompletenessBar()"></div>
       </div>
       <div class="fg" style="max-width:200px"><label class="fl">Hoogte hoogste kast (cm)</label>
         <input id="f_kasten_hoogte" class="fi" type="number" placeholder="215" min="0" oninput="updateAutoSummary()">
@@ -1966,8 +1966,9 @@ window.calculateCompleteness = () => {
     score += Math.min(3, apps.length - 1); // meer apparaten = rijker beeld
   }
 
-  // Foto's (max 18 pts) — foto's maken echt het verschil
-  const nFotos = (pendingPhotos || []).length;
+  // Foto's (max 18 pts) — alle foto's tellen mee: overzicht + sectiefotos
+  const nFotos = (pendingPhotos || []).length
+    + Object.values(pendingSectionPhotos || {}).reduce((s, arr) => s + arr.length, 0);
   score += nFotos >= 8 ? 18 : nFotos >= 5 ? 14 : nFotos >= 3 ? 10 : nFotos >= 1 ? 6 : 0;
 
   // Beschrijving (max 8 pts)
@@ -2154,6 +2155,7 @@ function onSectionPhotoSelect(e) {
     r.onload = ev => {
       photos.push({ file, url: ev.target.result });
       renderSectionPhotoRow(section);
+      window.updateCompletenessBar?.();
     };
     r.readAsDataURL(file);
   });
@@ -2178,6 +2180,7 @@ window.rmSectionPhoto = (section, i) => {
   if (pendingSectionPhotos[section]) {
     pendingSectionPhotos[section].splice(i, 1);
     renderSectionPhotoRow(section);
+    window.updateCompletenessBar?.();
   }
 };
 
