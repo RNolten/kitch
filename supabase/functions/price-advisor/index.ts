@@ -124,6 +124,15 @@ serve(async (req) => {
 
     let prompt: string;
 
+    const altijdSchattenRegel = `
+**BELANGRIJK: geef altijd een schatting, ook als je weinig exacte vergelijkingen vindt.**
+Als er onvoldoende specifieke particuliere advertenties zijn, gebruik dan:
+1. Vergelijkbare merken of prijsklassen (bijv. andere middensegment keukens)
+2. Commerciële aanbieders als indicatie, maar deel die prijs dan door 2 voor een realistische particuliere waarde
+3. Jouw expertise over de tweedehands keukenmarkt in Nederland
+
+Als je een ruimere schatting geeft door beperkte data, vermeld dit dan kort in de toelichting (bijv. "Weinig vergelijkbare advertenties gevonden; dit is een indicatieve schatting op basis van vergelijkbare merken."). Geef nooit een lege of foutmelding terug — altijd getallen.`;
+
     if (verkoper_prijs) {
       prompt = `Je bent een expert in tweedehands keukenprijzen in Nederland.
 
@@ -136,6 +145,7 @@ Zoek op Marktplaats.nl naar vergelijkbare PARTICULIERE tweedehands keukens${merk
 
 ${basisregels}
 - Pas de bandbreedte aan op de volledigheid: bij minimale gegevens (score <26) wees je conservatief; bij uitstekende gegevens (score >75) mag de range smaller zijn.
+${altijdSchattenRegel}
 
 Bepaal of €${verkoper_prijs} realistisch is:
 - "goed" als de prijs binnen 15% van de marktwaarde valt
@@ -163,6 +173,7 @@ Zoek op Marktplaats.nl naar vergelijkbare tweedehands keukens${merk ? ` van het 
 
 ${basisregels}
 - **Pas de bandbreedte aan op de volledigheid**: bij minimale gegevens (score <26) geef je een brede, conservatieve range en adviseer je de onderkant; bij uitstekende gegevens (score >75) mag de range smaller en nauwkeuriger zijn. Ontbrekende informatie over apparatuur, maten of conditie betekent dat je van het slechtste geval uitgaat.
+${altijdSchattenRegel}
 
 Geef een prijsadvies in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
 {
