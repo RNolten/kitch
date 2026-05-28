@@ -1979,8 +1979,8 @@ window.calculateCompleteness = () => {
   const desc = (v('f_desc') || '').trim();
   score += desc.length > 100 ? 8 : desc.length > 20 ? 5 : desc.length > 0 ? 2 : 0;
 
-  // Max bereikbaar: 49+21+16+18+8 = 112 — zo blijft 100% echt iets om naar te streven
-  return Math.min(100, Math.round(score * 100 / 112));
+  // Denominator 75: elk veld geeft een zichtbare sprong (~7-16%), 100% is haalbaar maar vraagt aandacht
+  return Math.min(100, Math.round(score * 100 / 75));
 };
 
 window.updateCompletenessBar = () => {
