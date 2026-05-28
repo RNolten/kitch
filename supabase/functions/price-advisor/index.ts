@@ -19,12 +19,21 @@ function leeftijdRange(j: string | number): string {
   return "13+";
 }
 
-function buildCacheKey(p: Record<string, string>): string {
+// Volledigheid in kwartalen zodat vergelijkbare scores dezelfde cache raken
+function volledigheidsRange(pct: number): string {
+  if (pct <= 25)  return "0-25";
+  if (pct <= 50)  return "26-50";
+  if (pct <= 75)  return "51-75";
+  return "76-100";
+}
+
+function buildCacheKey(p: Record<string, string | number>): string {
   return [
-    (p.merk || "").toLowerCase().trim(),
-    (p.conditie || "").toLowerCase().trim(),
+    (String(p.merk || "")).toLowerCase().trim(),
+    (String(p.conditie || "")).toLowerCase().trim(),
     leeftijdRange(p.leeftijd),
-    (p.vorm || "").toLowerCase().trim(),
+    (String(p.vorm || "")).toLowerCase().trim(),
+    volledigheidsRange(Number(p.volledigheid) || 0),
   ].join("|");
 }
 
@@ -39,6 +48,7 @@ serve(async (req) => {
       merk = "", type = "", kleur = "", conditie = "",
       leeftijd = "", vorm = "", buitenmaten = "",
       apparatuur = [], kasten_onder = "", kasten_boven = "", kasten_hoog = "",
+      volledigheid = 50,
     } = body;
 
     const CLAUDE_API_KEY    = Deno.env.get("CLAUDE_API_KEY");
@@ -52,7 +62,7 @@ serve(async (req) => {
     }
 
     // ── 1. Check cache ──────────────────────────────────────
-    const cacheKey = buildCacheKey({ merk, conditie, leeftijd, vorm });
+    const cacheKey = buildCacheKey({ merk, conditie, leeftijd, vorm, volledigheid });
     let cachedResult: Record<string, unknown> | null = null;
 
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
@@ -87,6 +97,10 @@ serve(async (req) => {
       kasten_hoog  ? `${kasten_hoog} hoge kasten`  : "",
     ].filter(Boolean).join(", ") || "onbekend";
 
+    const volledigheidsLabel = volledigheid >= 76 ? "uitstekend (76-100%)" :
+      volledigheid >= 51 ? "goed (51-75%)" :
+      volledigheid >= 26 ? "matig (26-50%)" : "minimaal (0-25%)";
+
     const prompt = `Je bent een expert in tweedehands keukenprijzen in Nederland.
 
 Een verkoper wil zijn keuken aanbieden via een tweedehands platform. Geef een realistisch prijsadvies op basis van vergelijkbare advertenties op Marktplaats.nl.
@@ -102,6 +116,8 @@ Een verkoper wil zijn keuken aanbieden via een tweedehands platform. Geef een re
 - Kasten: ${kastDetails}
 - Ingebouwde apparatuur: ${appList}
 
+**Volledigheid van de gegevens: ${volledigheidsLabel} (score: ${volledigheid}/100)**
+
 **Opdracht:**
 Zoek op Marktplaats.nl naar vergelijkbare tweedehands keukens${merk ? ` van het merk ${merk}` : ""}. Zoek ook op 2dehands.be voor vergelijking.
 
@@ -109,6 +125,7 @@ Houd rekening met:
 - Particuliere verkoop op Marktplaats is veel goedkoper dan commerciële aanbieders zoals Keukenloods Occasions, Revisite, of Kitchen Revolution — die vragen 2-4x meer omdat ze keukens nalopen en garantie geven. Focus op particuliere advertenties.
 - Leeftijd en conditie wegen zwaar mee
 - Populaire merken (IKEA/Metod, Siematic, Bulthaup, Miele-apparatuur) houden waarde beter
+- **Pas de bandbreedte aan op de volledigheid**: bij minimale gegevens (score <26) geef je een brede, conservatieve range en adviseer je de onderkant; bij uitstekende gegevens (score >75) mag de range smaller en nauwkeuriger zijn. Ontbrekende informatie over apparatuur, maten of conditie betekent dat je van het slechtste geval uitgaat.
 
 Geef een prijsadvies in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
 {

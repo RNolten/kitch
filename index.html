@@ -402,6 +402,19 @@
       border-top-color: transparent; border-radius: 50%;
       animation: pa-spin 0.7s linear infinite; flex-shrink: 0;
     }
+    .pa-completeness {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 0;
+      padding: 8px 16px 10px; border-top: 1.5px solid #ffe0cc;
+    }
+    .pa-comp-label { font-size: 11px; font-weight: 700; color: var(--gray-5); white-space: nowrap; }
+    .pa-comp-bar-wrap {
+      flex: 1; height: 6px; background: #ffe0cc; border-radius: 99px; overflow: hidden;
+    }
+    .pa-comp-bar {
+      height: 100%; border-radius: 99px; background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    .pa-comp-pct { font-size: 11px; font-weight: 800; color: var(--accent); min-width: 30px; text-align: right; }
 
     /* CHIP SELECTOR */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -1578,11 +1591,11 @@ async function pageAanbieden(el) {
       <div class="form-card-title">🏷️ Over de keuken</div>
       <div class="row3">
         <div class="fg"><label class="fl">Merk *</label>
-          <input id="f_merk" class="fi" placeholder="IKEA, Siematic…" oninput="updateAutoTitle()"></div>
+          <input id="f_merk" class="fi" placeholder="IKEA, Siematic…" oninput="updateAutoTitle();updateCompletenessBar()"></div>
         <div class="fg"><label class="fl">Type / serie</label>
-          <input id="f_type" class="fi" placeholder="Metod, S3, Frame…" oninput="updateAutoTitle()"></div>
+          <input id="f_type" class="fi" placeholder="Metod, S3, Frame…" oninput="updateAutoTitle();updateCompletenessBar()"></div>
         <div class="fg"><label class="fl">Kleur</label>
-          <input id="f_kleur" class="fi" placeholder="Wit, antraciet…" oninput="updateAutoTitle()"></div>
+          <input id="f_kleur" class="fi" placeholder="Wit, antraciet…" oninput="updateAutoTitle();updateCompletenessBar()"></div>
       </div>
       <div id="title-preview" class="title-preview"></div>
       <div class="row2" style="margin-top:4px">
@@ -1597,7 +1610,7 @@ async function pageAanbieden(el) {
         </div>
       </div>
       <div class="fg" style="max-width:180px"><label class="fl">Leeftijd (jaar)</label>
-        <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50" oninput="updateAutoSummary()"></div>
+        <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50" oninput="updateAutoSummary();updateCompletenessBar()"></div>
 
       <!-- PRIJSADVIES WIDGET -->
       <div class="price-advisor-box" id="price-advisor-box">
@@ -1606,12 +1619,17 @@ async function pageAanbieden(el) {
             <span style="font-size:18px">🤖</span>
             <div>
               <div class="price-advisor-head-label">AI Prijsadvies</div>
-              <div class="price-advisor-head-sub">Wat is jouw keuken waard op de markt?</div>
+              <div class="price-advisor-head-sub" id="pa-sub">Vul meer in voor een nauwkeuriger schatting</div>
             </div>
           </div>
           <button class="price-advisor-btn" id="pa-btn" onclick="event.stopPropagation(); getPriceAdvice()">
             Schat mijn prijs
           </button>
+        </div>
+        <div class="pa-completeness">
+          <span class="pa-comp-label">Volledigheid</span>
+          <div class="pa-comp-bar-wrap"><div class="pa-comp-bar" id="pa-comp-bar" style="width:0%"></div></div>
+          <span class="pa-comp-pct" id="pa-comp-pct">0%</span>
         </div>
         <div class="price-advisor-body" id="pa-body">
           <div id="pa-content"></div>
@@ -1626,7 +1644,7 @@ async function pageAanbieden(el) {
         <div class="chip-group">${vormChips}</div>
       </div>
       <div class="fg"><label class="fl" style="display:flex;align-items:center">Buitenmaten <i class="info-tip" data-tip="De totale ruimte die de keuken inneemt, gemeten aan de buitenkant van de kasten. Bijv. 360 × 60 cm voor een rechte keuken, of 360 × 240 cm voor een hoekkeuken.">i</i></label>
-        <input id="f_buitenmaten" class="fi" placeholder="bijv. 360 × 240 cm" oninput="updateAutoSummary()">
+        <input id="f_buitenmaten" class="fi" placeholder="bijv. 360 × 240 cm" oninput="updateAutoSummary();updateCompletenessBar()">
       </div>
       <div class="fg"><label class="fl">Bijzonderheden</label>
         <textarea id="f_kenmerken_notitie" class="ft" style="min-height:70px" placeholder="Opmerkingen over het ontwerp, indeling, bijzondere details…"></textarea>
@@ -1784,6 +1802,7 @@ async function pageAanbieden(el) {
     <div class="form-card">
       <div class="form-card-title">💬 Bijzonderheden</div>
       <textarea id="f_desc" class="ft" style="min-height:120px"
+        oninput="updateCompletenessBar()"
         placeholder="Vertel meer over de staat van de keuken, de reden van verkoop, of andere zaken die de koper moet weten…"></textarea>
     </div>
 
@@ -1864,6 +1883,7 @@ window.selChip = el => {
   if (!was) el.classList.add('sel');
   window.updateAutoTitle?.();
   window.updateAutoSummary?.();
+  window.updateCompletenessBar?.();
 };
 
 window.updateAutoTitle = () => {
@@ -1879,6 +1899,55 @@ window.updateAutoTitle = () => {
     }
   }
   window.updateAutoSummary?.();
+};
+
+// ── VOLLEDIGHEIDS SCORE ───────────────────────────────────────
+window.calculateCompleteness = () => {
+  const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+  let score = 0;
+
+  // Kerngegevens (53 pts)
+  if ((v('f_merk') || '').trim())      score += 15;  // merk is bepalend voor waarde
+  if (chipVal('conditie'))             score += 15;  // staat weegt zwaar
+  if ((v('f_age') || '').trim())       score += 10;  // leeftijd cruciaal
+  if (chipVal('keuken_type'))          score += 8;   // vorm
+  if ((v('f_type') || '').trim())      score += 6;   // serie/type
+  if ((v('f_kleur') || '').trim())     score += 5;   // kleur
+
+  // Afmetingen & details (17 pts)
+  if ((v('f_buitenmaten') || '').trim()) score += 7;
+  if (chipVal('materiaal_blad'))         score += 5;
+  if ((v('f_kasten_onder') || '').trim() || (v('f_kasten_boven') || '').trim() || (v('f_kasten_hoog') || '').trim()) score += 5;
+
+  // Apparatuur (10 pts)
+  const apps = pendingApparatuur || [];
+  if (apps.length > 0) {
+    score += 5;
+    const withMerk = apps.filter(a => a.merk && a.merk.trim()).length;
+    score += Math.round(5 * withMerk / apps.length);
+  }
+
+  // Foto's & beschrijving (14 pts)
+  const nFotos = (pendingPhotos || []).length;
+  score += nFotos >= 3 ? 10 : nFotos >= 1 ? 5 : 0;
+  if ((v('f_desc') || '').trim()) score += 4;
+
+  return Math.min(100, score);
+};
+
+window.updateCompletenessBar = () => {
+  const pct = window.calculateCompleteness();
+  const bar   = document.getElementById('pa-comp-bar');
+  const label = document.getElementById('pa-comp-pct');
+  const sub   = document.getElementById('pa-sub');
+  if (bar)   bar.style.width = pct + '%';
+  if (label) label.textContent = pct + '%';
+  if (sub) {
+    if (pct < 30)      sub.textContent = 'Vul meer in voor een nauwkeuriger schatting';
+    else if (pct < 60) sub.textContent = 'Goede start — meer details geven een betere prijs';
+    else if (pct < 85) sub.textContent = 'Bijna compleet — top schatting mogelijk!';
+    else               sub.textContent = 'Uitstekend! We kunnen nu een scherpe prijs berekenen';
+  }
 };
 
 // ── PRIJSADVIES ──────────────────────────────────────────────
@@ -1915,6 +1984,7 @@ window.getPriceAdvice = async () => {
     kasten_boven: v('f_kasten_boven') || '',
     kasten_hoog: v('f_kasten_hoog') || '',
     apparatuur: pendingApparatuur || [],
+    volledigheid: window.calculateCompleteness?.() ?? 50,
   };
 
   try {
@@ -2104,6 +2174,7 @@ function renderApparaatList() {
       </div>
       <button onclick="rmApparaat(${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-4);font-size:18px;padding:0 2px;flex-shrink:0;line-height:1">×</button>
     </div>`).join('') : '';
+  window.updateCompletenessBar?.();
 }
 
 window.addApparaat = () => {
@@ -2153,6 +2224,7 @@ function onPhotoSelect(e) {
     r.onload = ev => {
       pendingPhotos.push({ file, url: ev.target.result });
       document.getElementById('pg').innerHTML = photoGridHTML();
+      window.updateCompletenessBar?.();
     };
     r.readAsDataURL(file);
   });
