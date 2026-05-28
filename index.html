@@ -339,6 +339,70 @@
       display: flex; align-items: center; gap: 6px;
     }
 
+    /* PRICE ADVISOR */
+    .price-advisor-box {
+      margin-top: 20px; border: 2px solid var(--accent);
+      border-radius: var(--r-md); background: var(--accent-light);
+      overflow: hidden;
+    }
+    .price-advisor-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: background 0.1s;
+    }
+    .price-advisor-head:hover { background: #ffe8d8; }
+    .price-advisor-head-left { display: flex; align-items: center; gap: 8px; }
+    .price-advisor-head-label {
+      font-size: 11px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--accent);
+    }
+    .price-advisor-head-sub { font-size: 12px; color: var(--gray-5); font-weight: 600; }
+    .price-advisor-btn {
+      padding: 6px 14px; background: var(--accent); color: white;
+      border: 2px solid var(--black); border-radius: var(--r-sm);
+      font-size: 12px; font-weight: 800; cursor: pointer;
+      box-shadow: 2px 2px 0 var(--black); white-space: nowrap;
+      transition: all 0.1s;
+    }
+    .price-advisor-btn:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--black); }
+    .price-advisor-btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; transform: none; }
+    .price-advisor-body { padding: 16px; display: none; }
+    .price-advisor-body.open { display: block; border-top: 2px solid var(--accent); }
+    .price-range-row {
+      display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;
+    }
+    .price-range-item {
+      flex: 1; background: white; border: 2px solid var(--black);
+      border-radius: var(--r-sm); padding: 10px 14px; text-align: center;
+      box-shadow: 2px 2px 0 var(--black);
+    }
+    .price-range-item.highlight { background: var(--accent); color: white; border-color: var(--black); }
+    .price-range-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.65; }
+    .price-range-val { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; margin-top: 2px; }
+    .price-advisor-toelichting {
+      font-size: 13px; color: var(--gray-5); line-height: 1.65;
+      margin-bottom: 10px;
+    }
+    .price-advisor-bronnen { font-size: 11px; color: var(--gray-4); }
+    .price-advisor-bronnen a { color: var(--accent); text-decoration: underline; }
+    .price-advisor-use-btn {
+      margin-top: 12px; padding: 8px 16px; background: white; color: var(--black);
+      border: 2px solid var(--black); border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 800; cursor: pointer;
+      box-shadow: 2px 2px 0 var(--black); transition: all 0.1s;
+    }
+    .price-advisor-use-btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--black); }
+    .price-advisor-loading {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 700; color: var(--accent); padding: 8px 0;
+    }
+    @keyframes pa-spin { to { transform: rotate(360deg); } }
+    .pa-spinner {
+      width: 18px; height: 18px; border: 2.5px solid var(--accent);
+      border-top-color: transparent; border-radius: 50%;
+      animation: pa-spin 0.7s linear infinite; flex-shrink: 0;
+    }
+
     /* CHIP SELECTOR */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .chip {
@@ -1534,6 +1598,25 @@ async function pageAanbieden(el) {
       </div>
       <div class="fg" style="max-width:180px"><label class="fl">Leeftijd (jaar)</label>
         <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50" oninput="updateAutoSummary()"></div>
+
+      <!-- PRIJSADVIES WIDGET -->
+      <div class="price-advisor-box" id="price-advisor-box">
+        <div class="price-advisor-head" onclick="togglePriceAdvisor()">
+          <div class="price-advisor-head-left">
+            <span style="font-size:18px">🤖</span>
+            <div>
+              <div class="price-advisor-head-label">AI Prijsadvies</div>
+              <div class="price-advisor-head-sub">Wat is jouw keuken waard op de markt?</div>
+            </div>
+          </div>
+          <button class="price-advisor-btn" id="pa-btn" onclick="event.stopPropagation(); getPriceAdvice()">
+            Schat mijn prijs
+          </button>
+        </div>
+        <div class="price-advisor-body" id="pa-body">
+          <div id="pa-content"></div>
+        </div>
+      </div>
     </div>
 
     <!-- MATEN EN VORM -->
@@ -1796,6 +1879,98 @@ window.updateAutoTitle = () => {
     }
   }
   window.updateAutoSummary?.();
+};
+
+// ── PRIJSADVIES ──────────────────────────────────────────────
+window.togglePriceAdvisor = () => {
+  const body = document.getElementById('pa-body');
+  if (body) body.classList.toggle('open');
+};
+
+window.getPriceAdvice = async () => {
+  const btn = document.getElementById('pa-btn');
+  const content = document.getElementById('pa-content');
+  const body = document.getElementById('pa-body');
+  if (!btn || !content || !body) return;
+
+  // Open the body panel
+  body.classList.add('open');
+
+  // Show loading state
+  btn.disabled = true;
+  btn.textContent = 'Even geduld…';
+  content.innerHTML = `<div class="price-advisor-loading"><div class="pa-spinner"></div>Marktplaats doorzoeken en prijzen vergelijken…</div>`;
+
+  const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+
+  const payload = {
+    merk: v('f_merk') || '',
+    type: v('f_type') || '',
+    kleur: v('f_kleur') || '',
+    conditie: chipVal('conditie'),
+    leeftijd: v('f_age') || '',
+    vorm: chipVal('keuken_type'),
+    buitenmaten: v('f_buitenmaten') || '',
+    kasten_onder: v('f_kasten_onder') || '',
+    kasten_boven: v('f_kasten_boven') || '',
+    kasten_hoog: v('f_kasten_hoog') || '',
+    apparatuur: pendingApparatuur || [],
+  };
+
+  try {
+    const resp = await fetch(
+      `${SB_URL}/functions/v1/price-advisor`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SB_KEY}`,
+          'apikey': SB_KEY,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await resp.json();
+
+    if (data.error) {
+      content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ ${esc(data.error)}</div>`;
+    } else {
+      const fmt = n => n ? '€ ' + Number(n).toLocaleString('nl-NL') : '?';
+      const bronnenHtml = Array.isArray(data.bronnen) && data.bronnen.length
+        ? `<div class="price-advisor-bronnen">Bronnen: ${data.bronnen.map((b,i) => `<a href="${esc(b)}" target="_blank" rel="noopener">link ${i+1}</a>`).join(', ')}</div>`
+        : '';
+      content.innerHTML = `
+        <div class="price-range-row">
+          <div class="price-range-item">
+            <div class="price-range-lbl">Minimum</div>
+            <div class="price-range-val">${fmt(data.min)}</div>
+          </div>
+          <div class="price-range-item highlight">
+            <div class="price-range-lbl">Adviesprijs</div>
+            <div class="price-range-val">${fmt(data.advies)}</div>
+          </div>
+          <div class="price-range-item">
+            <div class="price-range-lbl">Maximum</div>
+            <div class="price-range-val">${fmt(data.max)}</div>
+          </div>
+        </div>
+        <div class="price-advisor-toelichting">${esc(data.toelichting || '')}</div>
+        ${bronnenHtml}
+        <button class="price-advisor-use-btn" onclick="
+          const inp = document.getElementById('f_p');
+          if (inp) { inp.value = '${data.advies || ''}'; inp.dispatchEvent(new Event('input')); }
+          this.textContent = '✓ Ingevuld!';
+          this.disabled = true;
+        ">↑ Gebruik adviesprijs</button>
+      `;
+    }
+  } catch(e) {
+    content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ Verbindingsfout: ${esc(String(e))}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Opnieuw schatten';
+  }
 };
 
 function _buildFormSummary() {
