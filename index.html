@@ -72,6 +72,33 @@
     .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
     .page-narrow { max-width: 540px; margin: 0 auto; padding: 32px 24px; }
 
+    /* STICKY VOLLEDIGHEIDS STRIP */
+    #pa-sticky-strip {
+      position: fixed; top: 62px; left: 0; right: 0; z-index: 200;
+      background: var(--accent-light); border-bottom: 2px solid var(--accent);
+      padding: 6px 24px; display: none;
+      align-items: center; gap: 10px;
+    }
+    body.in-aanbied #pa-sticky-strip { display: flex; }
+    body.in-aanbied main { padding-top: 33px; }
+    #pa-sticky-strip .ps-label {
+      font-size: 10px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--accent); white-space: nowrap; flex-shrink: 0;
+    }
+    #pa-sticky-strip .ps-bar-wrap {
+      flex: 1; height: 5px; background: #ffd9c4; border-radius: 99px; overflow: hidden;
+    }
+    #pa-sticky-strip .ps-bar {
+      height: 100%; border-radius: 99px; background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    #pa-sticky-strip .ps-pct {
+      font-size: 11px; font-weight: 900; color: var(--accent); min-width: 34px; text-align: right;
+    }
+    @media (max-width: 540px) {
+      #pa-sticky-strip { padding: 5px 14px; top: 62px; }
+    }
+
     /* HERO */
     .hero {
       background: #FFF8F4; border-bottom: 2px solid var(--black);
@@ -671,6 +698,11 @@
   </style>
 </head>
 <body>
+<div id="pa-sticky-strip">
+  <span class="ps-label">Volledigheid</span>
+  <div class="ps-bar-wrap"><div class="ps-bar" id="ps-bar" style="width:0%"></div></div>
+  <span class="ps-pct" id="ps-pct">0%</span>
+</div>
 <div id="app"><div class="spin-wrap"><div class="spin"></div></div></div>
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
 <input type="file" id="fileInTekening" accept="image/*,.pdf" multiple style="display:none">
@@ -734,6 +766,10 @@ async function router() {
   app.innerHTML = navHTML();
   const main = document.createElement('main');
   app.appendChild(main);
+
+  const isFormPage = route === 'aanbieden' || route === 'bewerken';
+  document.body.classList.toggle('in-aanbied', isFormPage);
+  if (!isFormPage) window.updateCompletenessBar?.(); // reset bar on nav away
 
   if (route === '')               await pageHome(main);
   else if (route === 'keukens')   await pageKeukens(main);
@@ -1906,37 +1942,46 @@ window.calculateCompleteness = () => {
   const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
   let score = 0;
 
-  // Kerngegevens (53 pts)
-  if ((v('f_merk') || '').trim())      score += 15;  // merk is bepalend voor waarde
-  if (chipVal('conditie'))             score += 15;  // staat weegt zwaar
-  if ((v('f_age') || '').trim())       score += 10;  // leeftijd cruciaal
-  if (chipVal('keuken_type'))          score += 8;   // vorm
-  if ((v('f_type') || '').trim())      score += 6;   // serie/type
-  if ((v('f_kleur') || '').trim())     score += 5;   // kleur
+  // Kerngegevens (max 49 pts)
+  if ((v('f_merk')  || '').trim())  score += 12;  // merk bepaalt waarde
+  if (chipVal('conditie'))           score += 12;  // staat weegt zwaar
+  if ((v('f_age')   || '').trim())   score += 9;   // leeftijd cruciaal
+  if (chipVal('keuken_type'))        score += 7;   // vorm
+  if ((v('f_type')  || '').trim())   score += 5;   // serie/type
+  if ((v('f_kleur') || '').trim())   score += 4;   // kleur
 
-  // Afmetingen & details (17 pts)
-  if ((v('f_buitenmaten') || '').trim()) score += 7;
-  if (chipVal('materiaal_blad'))         score += 5;
-  if ((v('f_kasten_onder') || '').trim() || (v('f_kasten_boven') || '').trim() || (v('f_kasten_hoog') || '').trim()) score += 5;
+  // Afmetingen & details (max 21 pts)
+  if ((v('f_buitenmaten')  || '').trim()) score += 8;
+  if ((v('f_kasten_onder') || '').trim()) score += 4;
+  if ((v('f_kasten_boven') || '').trim()) score += 3;
+  if ((v('f_kasten_hoog')  || '').trim()) score += 2;
+  if (chipVal('materiaal_blad'))           score += 4;
 
-  // Apparatuur (10 pts)
+  // Apparatuur (max 16 pts)
   const apps = pendingApparatuur || [];
   if (apps.length > 0) {
     score += 5;
     const withMerk = apps.filter(a => a.merk && a.merk.trim()).length;
-    score += Math.round(5 * withMerk / apps.length);
+    score += Math.round(8 * withMerk / apps.length);
+    score += Math.min(3, apps.length - 1); // meer apparaten = rijker beeld
   }
 
-  // Foto's & beschrijving (14 pts)
+  // Foto's (max 18 pts) — foto's maken echt het verschil
   const nFotos = (pendingPhotos || []).length;
-  score += nFotos >= 3 ? 10 : nFotos >= 1 ? 5 : 0;
-  if ((v('f_desc') || '').trim()) score += 4;
+  score += nFotos >= 8 ? 18 : nFotos >= 5 ? 14 : nFotos >= 3 ? 10 : nFotos >= 1 ? 6 : 0;
 
-  return Math.min(100, score);
+  // Beschrijving (max 8 pts)
+  const desc = (v('f_desc') || '').trim();
+  score += desc.length > 100 ? 8 : desc.length > 20 ? 5 : desc.length > 0 ? 2 : 0;
+
+  // Max bereikbaar: 49+21+16+18+8 = 112 — zo blijft 100% echt iets om naar te streven
+  return Math.min(100, Math.round(score * 100 / 112));
 };
 
 window.updateCompletenessBar = () => {
-  const pct = window.calculateCompleteness();
+  const pct = window.calculateCompleteness?.() ?? 0;
+
+  // Widget bar (in de form-card)
   const bar   = document.getElementById('pa-comp-bar');
   const label = document.getElementById('pa-comp-pct');
   const sub   = document.getElementById('pa-sub');
@@ -1948,6 +1993,12 @@ window.updateCompletenessBar = () => {
     else if (pct < 85) sub.textContent = 'Bijna compleet — top schatting mogelijk!';
     else               sub.textContent = 'Uitstekend! We kunnen nu een scherpe prijs berekenen';
   }
+
+  // Sticky strip bovenaan de pagina
+  const sBar  = document.getElementById('ps-bar');
+  const sPct  = document.getElementById('ps-pct');
+  if (sBar)  sBar.style.width = pct + '%';
+  if (sPct)  sPct.textContent = pct + '%';
 };
 
 // ── PRIJSADVIES ──────────────────────────────────────────────
@@ -2004,7 +2055,8 @@ window.getPriceAdvice = async () => {
     const data = await resp.json();
 
     if (data.error) {
-      content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ ${esc(data.error)}</div>`;
+      const detail = data.detail ? `<div style="font-size:11px;font-weight:600;color:var(--gray-4);margin-top:6px;word-break:break-all">${esc(data.detail)}</div>` : '';
+      content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ ${esc(data.error)}${detail}</div>`;
     } else {
       const fmt = n => n ? '€ ' + Number(n).toLocaleString('nl-NL') : '?';
       const bronnenHtml = Array.isArray(data.bronnen) && data.bronnen.length
