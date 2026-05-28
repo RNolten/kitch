@@ -125,14 +125,13 @@
       pointer-events: none; z-index: 3;
       display: flex; align-items: center;
     }
-    .ps-ghost:not(.eaten) { animation: ps-ghost-pace 0.9s ease-in-out infinite; }
-    #ps-ghost-2:not(.eaten) { animation-delay: -0.23s; }
-    #ps-ghost-3:not(.eaten) { animation-delay: -0.46s; }
-    #ps-ghost-4:not(.eaten) { animation-delay: -0.68s; }
-    @keyframes ps-ghost-pace {
-      0%   { transform: translate(-50%, -50%) translateX(-3px); }
-      50%  { transform: translate(-50%, -50%) translateX(3px); }
-      100% { transform: translate(-50%, -50%) translateX(-3px); }
+    .ps-ghost:not(.eaten) { animation: ps-ghost-bob 0.45s ease-in-out infinite; }
+    #ps-ghost-2:not(.eaten) { animation-delay: -0.11s; }
+    #ps-ghost-3:not(.eaten) { animation-delay: -0.22s; }
+    #ps-ghost-4:not(.eaten) { animation-delay: -0.33s; }
+    @keyframes ps-ghost-bob {
+      0%, 100% { transform: translate(-50%, calc(-50% - 1.5px)); }
+      50%       { transform: translate(-50%, calc(-50% + 1.5px)); }
     }
     .ps-ghost.eaten {
       opacity: 0 !important;
@@ -765,10 +764,10 @@
   <div class="ps-game-area">
     <div class="ps-bar-track"><div class="ps-bar" id="ps-bar" style="width:0%"></div></div>
     <div class="ps-pacman" id="ps-pacman" style="left:0"></div>
-    <span class="ps-ghost" id="ps-ghost-1" style="left:25%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
-    <span class="ps-ghost" id="ps-ghost-2" style="left:50%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB8FF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
-    <span class="ps-ghost" id="ps-ghost-3" style="left:75%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#00FFFF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
-    <span class="ps-ghost" id="ps-ghost-4" style="left:100%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB852" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-1" style="left:4%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-2" style="left:4.5%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB8FF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-3" style="left:5%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#00FFFF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-4" style="left:5.5%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB852" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
   </div>
   <span class="ps-pct" id="ps-pct">0%</span>
 </div>
@@ -838,7 +837,12 @@ async function router() {
 
   const isFormPage = route === 'aanbieden' || route === 'bewerken';
   document.body.classList.toggle('in-aanbied', isFormPage);
-  if (!isFormPage) window.updateCompletenessBar?.(); // reset bar on nav away
+  if (isFormPage) {
+    window.psStartGame?.();
+  } else {
+    window.psStopGame?.();
+    window.updateCompletenessBar?.();
+  }
 
   if (route === '')               await pageHome(main);
   else if (route === 'keukens')   await pageKeukens(main);
@@ -2106,36 +2110,18 @@ window.updateCompletenessBar = () => {
     else               sub.textContent = 'Uitstekend! We kunnen nu een scherpe prijs berekenen';
   }
 
-  // Sticky strip — stippenpad + Pac-Man + vliegende spookjes
+  // Sticky strip — stippenpad + Pac-Man
   const sBar   = document.getElementById('ps-bar');
   const sPct   = document.getElementById('ps-pct');
   const pacman = document.getElementById('ps-pacman');
-  // Gegeten deel bedekt stippen met achtergrondkleur
   if (sBar)   sBar.style.width = pct + '%';
   if (sPct)   sPct.textContent = pct + '%';
-  // Pac-Man beweegt mee, gecorrigeerd voor eigen breedte
   if (pacman) {
     const offset = Math.round(pct / 100 * 16);
     pacman.style.left = `calc(${pct}% - ${offset}px)`;
   }
-  // Spookjes: beginnen geclusterd vlak voor Pac-Man, vluchten naar hun drempel
-  [1, 2, 3, 4].forEach(j => {
-    const ghost = document.getElementById(`ps-ghost-${j}`);
-    if (!ghost) return;
-    const threshold = j * 25; // 25, 50, 75, 100
-    if (pct >= threshold) {
-      ghost.classList.add('eaten');
-      return;
-    }
-    ghost.classList.remove('eaten');
-    // Startpositie: geclusterd vlak voor Pac-Man (3, 3.5, 4, 4.5%)
-    const startPos = 3 + (j - 1) * 0.5;
-    // Lerp richting drempel naarmate Pac-Man nadert
-    const lerpPos = startPos + (threshold - startPos) * (pct / threshold);
-    // Altijd minstens 2% voor Pac-Man, nooit verder dan drempel
-    const ghostPct = Math.min(Math.max(lerpPos, pct + 2), threshold);
-    ghost.style.left = ghostPct.toFixed(1) + '%';
-  });
+  // Geef score door aan de game loop — die regelt de spookjes
+  window._psPacPct = pct;
 
   // Button-tekst aanpassen: check vs schatten
   const paBtn = document.getElementById('pa-btn');
@@ -3450,6 +3436,125 @@ const v   = id => document.getElementById(id)?.value?.trim() || '';
 const err = msg => `<div class="alert alert-err">⚠️ ${msg}</div>`;
 const sort = arr => (arr || []).slice().sort((a,b) => a.order_index - b.order_index);
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) : '';
+
+
+// ── PAC-MAN GAME LOOP ─────────────────────────────────────────
+(function() {
+  // Snelheden in % per seconde
+  const CFG = [
+    { idx: 1, threshold: 25,  speed: 5.5 },  // Blinky (rood)
+    { idx: 2, threshold: 50,  speed: 3.5 },  // Pinky (roze)
+    { idx: 3, threshold: 75,  speed: 6.5 },  // Inky (cyaan)
+    { idx: 4, threshold: 100, speed: 5.0 },  // Clyde (oranje)
+  ];
+
+  let state = null;
+  let rafId = null;
+  let lastTs = 0;
+
+  function initState() {
+    return CFG.map(c => ({
+      ...c,
+      pos: 3.5 + (c.idx - 1) * 0.5, // 3.5 / 4.0 / 4.5 / 5.0%
+      dir: 1,
+      eaten: false,
+      reverseTimer: 1.5 + Math.random() * 2.5, // 1.5–4s tot eerste ommekeer
+      reversing: false,
+      reverseEnd: 0,
+    }));
+  }
+
+  function tick(ts) {
+    rafId = requestAnimationFrame(tick);
+
+    const dt = Math.min((ts - lastTs) / 1000, 0.05);
+    lastTs = ts;
+    if (!state) return;
+
+    const pacPct = window._psPacPct ?? 0;
+
+    state.forEach(g => {
+      if (g.eaten) return;
+
+      const el = document.getElementById('ps-ghost-' + g.idx);
+
+      // Opgegeten?
+      if (pacPct >= g.threshold) {
+        g.eaten = true;
+        el && el.classList.add('eaten');
+        return;
+      }
+
+      // Ommekeer-logica
+      if (g.reversing) {
+        if (ts >= g.reverseEnd) {
+          g.reversing = false;
+          g.dir = 1;
+          g.reverseTimer = 1.5 + Math.random() * 3;
+        }
+      } else {
+        g.reverseTimer -= dt;
+        if (g.reverseTimer <= 0) {
+          g.reversing = true;
+          g.dir = -1;
+          g.reverseEnd = ts + (250 + Math.random() * 550); // 250–800 ms
+        }
+      }
+
+      // Bewegen
+      g.pos += g.dir * g.speed * dt;
+
+      // Grenzen: altijd vóór Pac-Man, nooit voorbij drempel
+      const lo = pacPct + 0.8;
+      const hi = g.threshold - 0.5;
+
+      if (lo > hi) {
+        // Pac-Man raakt spookje — eat it
+        g.eaten = true;
+        el && el.classList.add('eaten');
+        return;
+      }
+
+      if (g.pos < lo) {
+        g.pos = lo;
+        g.dir = 1;
+        g.reversing = false;
+        g.reverseTimer = 0.8 + Math.random() * 1.5;
+      }
+      if (g.pos > hi) {
+        g.pos = hi;
+        g.dir = -1;
+        g.reversing = true;
+        g.reverseEnd = ts + (200 + Math.random() * 400);
+      }
+
+      if (el && !el.classList.contains('eaten')) {
+        el.style.left = g.pos.toFixed(2) + '%';
+      }
+    });
+  }
+
+  window.psStartGame = function() {
+    if (rafId) cancelAnimationFrame(rafId);
+    window._psPacPct = 0;
+    state = initState();
+    // Reset visuele staat
+    [1, 2, 3, 4].forEach(i => {
+      const el = document.getElementById('ps-ghost-' + i);
+      if (el) {
+        el.classList.remove('eaten');
+        el.style.left = (3.5 + (i - 1) * 0.5) + '%';
+      }
+    });
+    lastTs = performance.now();
+    rafId = requestAnimationFrame(tick);
+  };
+
+  window.psStopGame = function() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    state = null;
+  };
+})();
 
 router();
 </script>
