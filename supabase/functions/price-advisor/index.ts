@@ -49,6 +49,7 @@ serve(async (req) => {
       leeftijd = "", vorm = "", buitenmaten = "",
       apparatuur = [], kasten_onder = "", kasten_boven = "", kasten_hoog = "",
       volledigheid = 50,
+      verkoper_prijs = null,
     } = body;
 
     const CLAUDE_API_KEY    = Deno.env.get("CLAUDE_API_KEY");
@@ -62,6 +63,7 @@ serve(async (req) => {
     }
 
     // ── 1. Check cache ──────────────────────────────────────
+    // verkoper_prijs zit niet in de cache key — marktdata is onafhankelijk van de gevraagde prijs
     const cacheKey = buildCacheKey({ merk, conditie, leeftijd, vorm, volledigheid });
     let cachedResult: Record<string, unknown> | null = null;
 
@@ -101,11 +103,7 @@ serve(async (req) => {
       volledigheid >= 51 ? "goed (51-75%)" :
       volledigheid >= 26 ? "matig (26-50%)" : "minimaal (0-25%)";
 
-    const prompt = `Je bent een expert in tweedehands keukenprijzen in Nederland.
-
-Een verkoper wil zijn keuken aanbieden via een tweedehands platform. Geef een realistisch prijsadvies op basis van vergelijkbare advertenties op Marktplaats.nl.
-
-**Keuken details:**
+    const keukenbeschrijving = `**Keuken details:**
 - Merk: ${merk || "onbekend"}
 - Type/Serie: ${type || "onbekend"}
 - Kleur: ${kleur || "onbekend"}
@@ -116,15 +114,54 @@ Een verkoper wil zijn keuken aanbieden via een tweedehands platform. Geef een re
 - Kasten: ${kastDetails}
 - Ingebouwde apparatuur: ${appList}
 
-**Volledigheid van de gegevens: ${volledigheidsLabel} (score: ${volledigheid}/100)**
+**Volledigheid van de gegevens: ${volledigheidsLabel} (score: ${volledigheid}/100)**`;
+
+    const basisregels = `Houd rekening met:
+- Zoek ALLEEN naar PARTICULIERE advertenties op Marktplaats, niet naar commerciële partijen zoals Keukenloods Occasions, Revisite, of Kitchen Revolution — die vragen 2-4x meer omdat ze keukens nalopen, opknappen en garantie geven.
+- Een keuken die nog niet gedemonteerd is, is realistisch €300–500 minder waard dan een al-opgeknapte keuken bij een commerciële partij.
+- Leeftijd en conditie wegen zwaar mee.
+- Populaire merken (IKEA/Metod, Siematic, Bulthaup, Miele-apparatuur) houden waarde beter.`;
+
+    let prompt: string;
+
+    if (verkoper_prijs) {
+      prompt = `Je bent een expert in tweedehands keukenprijzen in Nederland.
+
+Een verkoper overweegt zijn keuken aan te bieden voor **€${verkoper_prijs}**. Beoordeel of dit een realistische particuliere vraagprijs is op basis van vergelijkbare advertenties op Marktplaats.nl.
+
+${keukenbeschrijving}
+
+**Opdracht:**
+Zoek op Marktplaats.nl naar vergelijkbare PARTICULIERE tweedehands keukens${merk ? ` van het merk ${merk}` : ""}. Zoek ook op 2dehands.be voor aanvullende vergelijking.
+
+${basisregels}
+- Pas de bandbreedte aan op de volledigheid: bij minimale gegevens (score <26) wees je conservatief; bij uitstekende gegevens (score >75) mag de range smaller zijn.
+
+Bepaal of €${verkoper_prijs} realistisch is:
+- "goed" als de prijs binnen 15% van de marktwaarde valt
+- "te_hoog" als de prijs meer dan 15% boven de marktwaarde ligt
+- "te_laag" als de prijs meer dan 15% onder de marktwaarde ligt
+
+Geef je beoordeling in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
+{
+  "verdict": "goed" of "te_hoog" of "te_laag",
+  "min": <realistisch minimum in euro>,
+  "max": <realistisch maximum in euro>,
+  "advies": <aanbevolen vraagprijs in euro>,
+  "toelichting": "<2-3 zinnen in het Nederlands: is de prijs realistisch, wat vind je terug op Marktplaats, eventuele tips>",
+  "bronnen": ["<url1>", "<url2>"]
+}`;
+    } else {
+      prompt = `Je bent een expert in tweedehands keukenprijzen in Nederland.
+
+Een verkoper wil zijn keuken aanbieden via een tweedehands platform. Geef een realistisch prijsadvies op basis van vergelijkbare advertenties op Marktplaats.nl.
+
+${keukenbeschrijving}
 
 **Opdracht:**
 Zoek op Marktplaats.nl naar vergelijkbare tweedehands keukens${merk ? ` van het merk ${merk}` : ""}. Zoek ook op 2dehands.be voor vergelijking.
 
-Houd rekening met:
-- Particuliere verkoop op Marktplaats is veel goedkoper dan commerciële aanbieders zoals Keukenloods Occasions, Revisite, of Kitchen Revolution — die vragen 2-4x meer omdat ze keukens nalopen en garantie geven. Focus op particuliere advertenties.
-- Leeftijd en conditie wegen zwaar mee
-- Populaire merken (IKEA/Metod, Siematic, Bulthaup, Miele-apparatuur) houden waarde beter
+${basisregels}
 - **Pas de bandbreedte aan op de volledigheid**: bij minimale gegevens (score <26) geef je een brede, conservatieve range en adviseer je de onderkant; bij uitstekende gegevens (score >75) mag de range smaller en nauwkeuriger zijn. Ontbrekende informatie over apparatuur, maten of conditie betekent dat je van het slechtste geval uitgaat.
 
 Geef een prijsadvies in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
@@ -135,6 +172,7 @@ Geef een prijsadvies in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
   "toelichting": "<2-3 zinnen in het Nederlands over hoe je tot dit bedrag komt en eventuele tips>",
   "bronnen": ["<url1>", "<url2>"]
 }`;
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

@@ -442,6 +442,20 @@
       transition: width 0.4s ease;
     }
     .pa-comp-pct { font-size: 11px; font-weight: 800; color: var(--accent); min-width: 30px; text-align: right; }
+    /* VERDICT */
+    .pa-verdict {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: var(--r-sm);
+      border: 2.5px solid; margin-bottom: 12px;
+    }
+    .pa-verdict.goed    { background: #e6f9ee; border-color: #2d9a5a; color: #1d6b3e; }
+    .pa-verdict.te-hoog { background: #fff3e0; border-color: #e57a00; color: #9e5200; }
+    .pa-verdict.te-laag { background: #e8f4ff; border-color: #1976d2; color: #0d47a1; }
+    .pa-verdict-icon { font-size: 22px; flex-shrink: 0; }
+    .pa-verdict-text { flex: 1; }
+    .pa-verdict-title { font-size: 14px; font-weight: 900; }
+    .pa-verdict-range { font-size: 11px; font-weight: 700; opacity: 0.65; margin-top: 2px; }
+    .pa-verdict-advies { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; flex-shrink: 0; }
 
     /* CHIP SELECTOR */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -2041,6 +2055,13 @@ window.updateCompletenessBar = () => {
   const sPct  = document.getElementById('ps-pct');
   if (sBar)  sBar.style.width = pct + '%';
   if (sPct)  sPct.textContent = pct + '%';
+
+  // Button-tekst aanpassen: check vs schatten
+  const paBtn = document.getElementById('pa-btn');
+  if (paBtn && !paBtn.disabled) {
+    const hasPrijs = !!(v('f_p') || '').trim();
+    paBtn.textContent = hasPrijs ? 'Check mijn prijs' : 'Schat mijn prijs';
+  }
 };
 
 // ── PRIJSADVIES ──────────────────────────────────────────────
@@ -2058,12 +2079,16 @@ window.getPriceAdvice = async () => {
   // Open the body panel
   body.classList.add('open');
 
+  const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+  const verkoper_prijs = parseInt(v('f_p')) || null;
+
   // Show loading state
   btn.disabled = true;
   btn.textContent = 'Even geduld…';
-  content.innerHTML = `<div class="price-advisor-loading"><div class="pa-spinner"></div>Marktplaats doorzoeken en prijzen vergelijken…</div>`;
-
-  const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+  const loadingMsg = verkoper_prijs
+    ? `Marktplaats doorzoeken en jouw prijs van € ${verkoper_prijs.toLocaleString('nl-NL')} vergelijken…`
+    : `Marktplaats doorzoeken en prijzen vergelijken…`;
+  content.innerHTML = `<div class="price-advisor-loading"><div class="pa-spinner"></div>${loadingMsg}</div>`;
 
   const payload = {
     merk: v('f_merk') || '',
@@ -2078,6 +2103,7 @@ window.getPriceAdvice = async () => {
     kasten_hoog: v('f_kasten_hoog') || '',
     apparatuur: pendingApparatuur || [],
     volledigheid: window.calculateCompleteness?.() ?? 50,
+    verkoper_prijs,
   };
 
   try {
@@ -2100,40 +2126,72 @@ window.getPriceAdvice = async () => {
       const detail = data.detail ? `<div style="font-size:11px;font-weight:600;color:var(--gray-4);margin-top:6px;word-break:break-all">${esc(data.detail)}</div>` : '';
       content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ ${esc(data.error)}${detail}</div>`;
     } else {
-      const fmt = n => n ? '€ ' + Number(n).toLocaleString('nl-NL') : '?';
+      const fmt = n => n ? '€ ' + Number(n).toLocaleString('nl-NL') : '?';
       const bronnenHtml = Array.isArray(data.bronnen) && data.bronnen.length
         ? `<div class="price-advisor-bronnen">Bronnen: ${data.bronnen.map((b,i) => `<a href="${esc(b)}" target="_blank" rel="noopener">link ${i+1}</a>`).join(', ')}</div>`
         : '';
-      content.innerHTML = `
-        <div class="price-range-row">
-          <div class="price-range-item">
-            <div class="price-range-lbl">Minimum</div>
-            <div class="price-range-val">${fmt(data.min)}</div>
+
+      if (data.verdict) {
+        // Validatiemodus — verkoper had al een prijs in gedachten
+        const verdictMap = {
+          goed:    { cls: 'goed',    icon: '✅', title: 'Goede prijs!' },
+          te_hoog: { cls: 'te-hoog', icon: '⬆️', title: 'Aan de hoge kant' },
+          te_laag: { cls: 'te-laag', icon: '⬇️', title: 'Je kunt er meer voor vragen' },
+        };
+        const vd = verdictMap[data.verdict] || { cls: 'goed', icon: '💡', title: 'Prijscheck' };
+        const aanpassenBtn = data.verdict !== 'goed'
+          ? `<button class="price-advisor-use-btn" onclick="
+              const inp = document.getElementById('f_p');
+              if (inp) { inp.value = '${data.advies || ''}'; inp.dispatchEvent(new Event('input')); }
+              this.textContent = '✓ Aangepast!'; this.disabled = true;
+            ">Pas vraagprijs aan naar ${fmt(data.advies)}</button>`
+          : '';
+        content.innerHTML = `
+          <div class="pa-verdict ${vd.cls}">
+            <span class="pa-verdict-icon">${vd.icon}</span>
+            <div class="pa-verdict-text">
+              <div class="pa-verdict-title">${vd.title}</div>
+              <div class="pa-verdict-range">Marktrange: ${fmt(data.min)} – ${fmt(data.max)}</div>
+            </div>
+            <div class="pa-verdict-advies">${fmt(data.advies)}</div>
           </div>
-          <div class="price-range-item highlight">
-            <div class="price-range-lbl">Adviesprijs</div>
-            <div class="price-range-val">${fmt(data.advies)}</div>
+          <div class="price-advisor-toelichting">${esc(data.toelichting || '')}</div>
+          ${bronnenHtml}
+          ${aanpassenBtn}
+        `;
+      } else {
+        // Geen prijs opgegeven — toon range-schatting
+        content.innerHTML = `
+          <div class="price-range-row">
+            <div class="price-range-item">
+              <div class="price-range-lbl">Minimum</div>
+              <div class="price-range-val">${fmt(data.min)}</div>
+            </div>
+            <div class="price-range-item highlight">
+              <div class="price-range-lbl">Adviesprijs</div>
+              <div class="price-range-val">${fmt(data.advies)}</div>
+            </div>
+            <div class="price-range-item">
+              <div class="price-range-lbl">Maximum</div>
+              <div class="price-range-val">${fmt(data.max)}</div>
+            </div>
           </div>
-          <div class="price-range-item">
-            <div class="price-range-lbl">Maximum</div>
-            <div class="price-range-val">${fmt(data.max)}</div>
-          </div>
-        </div>
-        <div class="price-advisor-toelichting">${esc(data.toelichting || '')}</div>
-        ${bronnenHtml}
-        <button class="price-advisor-use-btn" onclick="
-          const inp = document.getElementById('f_p');
-          if (inp) { inp.value = '${data.advies || ''}'; inp.dispatchEvent(new Event('input')); }
-          this.textContent = '✓ Ingevuld!';
-          this.disabled = true;
-        ">↑ Gebruik adviesprijs</button>
-      `;
+          <div class="price-advisor-toelichting">${esc(data.toelichting || '')}</div>
+          ${bronnenHtml}
+          <button class="price-advisor-use-btn" onclick="
+            const inp = document.getElementById('f_p');
+            if (inp) { inp.value = '${data.advies || ''}'; inp.dispatchEvent(new Event('input')); }
+            this.textContent = '✓ Ingevuld!'; this.disabled = true;
+          ">↑ Gebruik adviesprijs</button>
+        `;
+      }
     }
   } catch(e) {
     content.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:700">⚠️ Verbindingsfout: ${esc(String(e))}</div>`;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Opnieuw schatten';
+    const hasPrijs = !!parseInt(v('f_p'));
+    btn.textContent = hasPrijs ? 'Opnieuw checken' : 'Opnieuw schatten';
   }
 };
 
