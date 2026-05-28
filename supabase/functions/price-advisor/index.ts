@@ -124,6 +124,19 @@ serve(async (req) => {
 
     let prompt: string;
 
+    // Ontbrekende velden die de schatting minder nauwkeurig maken
+    const ontbrekend: string[] = [];
+    if (!merk)                                          ontbrekend.push("merk");
+    if (!conditie)                                      ontbrekend.push("conditie");
+    if (!leeftijd)                                      ontbrekend.push("leeftijd");
+    if (!buitenmaten)                                   ontbrekend.push("afmetingen");
+    if (!Array.isArray(apparatuur) || apparatuur.length === 0) ontbrekend.push("ingebouwde apparatuur");
+    if (!vorm)                                          ontbrekend.push("keukenindeling (L/U/eiland etc.)");
+
+    const ontbrekendeNota = ontbrekend.length > 0
+      ? `\n\nDe volgende belangrijke gegevens ontbreken: **${ontbrekend.join(", ")}**. Vermeld dit expliciet in je toelichting — met name het ontbreken van apparatuurinformatie maakt een nauwkeurige schatting lastig, omdat ingebouwde apparatuur soms meer waard is dan de keuken zelf.`
+      : "";
+
     const altijdSchattenRegel = `
 **BELANGRIJK: geef altijd een schatting, ook als je weinig exacte vergelijkingen vindt.**
 Als er onvoldoende specifieke particuliere advertenties zijn, gebruik dan:
@@ -145,6 +158,7 @@ Zoek op Marktplaats.nl naar vergelijkbare PARTICULIERE tweedehands keukens${merk
 
 ${basisregels}
 - Pas de bandbreedte aan op de volledigheid: bij minimale gegevens (score <26) wees je conservatief; bij uitstekende gegevens (score >75) mag de range smaller zijn.
+${ontbrekendeNota}
 ${altijdSchattenRegel}
 
 Bepaal of €${verkoper_prijs} realistisch is:
@@ -172,7 +186,8 @@ ${keukenbeschrijving}
 Zoek op Marktplaats.nl naar vergelijkbare tweedehands keukens${merk ? ` van het merk ${merk}` : ""}. Zoek ook op 2dehands.be voor vergelijking.
 
 ${basisregels}
-- **Pas de bandbreedte aan op de volledigheid**: bij minimale gegevens (score <26) geef je een brede, conservatieve range en adviseer je de onderkant; bij uitstekende gegevens (score >75) mag de range smaller en nauwkeuriger zijn. Ontbrekende informatie over apparatuur, maten of conditie betekent dat je van het slechtste geval uitgaat.
+- **Pas de bandbreedte aan op de volledigheid**: bij minimale gegevens (score <26) geef je een brede, conservatieve range en adviseer je de onderkant; bij uitstekende gegevens (score >75) mag de range smaller en nauwkeuriger zijn.
+${ontbrekendeNota}
 ${altijdSchattenRegel}
 
 Geef een prijsadvies in dit JSON-formaat (ALLEEN JSON, geen uitleg erbuiten):
