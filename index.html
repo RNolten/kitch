@@ -76,27 +76,50 @@
     #pa-sticky-strip {
       position: fixed; top: 62px; left: 0; right: 0; z-index: 200;
       background: var(--accent-light); border-bottom: 2px solid var(--accent);
-      padding: 6px 24px; display: none;
-      align-items: center; gap: 10px;
+      padding: 4px 24px; display: none;
+      align-items: center; gap: 10px; height: 36px;
     }
     body.in-aanbied #pa-sticky-strip { display: flex; }
-    body.in-aanbied main { padding-top: 33px; }
+    body.in-aanbied main { padding-top: 36px; }
     #pa-sticky-strip .ps-label {
       font-size: 10px; font-weight: 900; text-transform: uppercase;
       letter-spacing: 1px; color: var(--accent); white-space: nowrap; flex-shrink: 0;
     }
-    #pa-sticky-strip .ps-bar-wrap {
-      flex: 1; height: 5px; background: #ffd9c4; border-radius: 99px; overflow: hidden;
+    /* Game area */
+    .ps-game-area { flex: 1; position: relative; height: 22px; }
+    .ps-bar-track {
+      position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+      height: 6px; background: #ffd9c4; border-radius: 99px; overflow: hidden;
     }
-    #pa-sticky-strip .ps-bar {
-      height: 100%; border-radius: 99px; background: var(--accent);
-      transition: width 0.4s ease;
+    .ps-bar { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s ease; }
+    /* Pac-Man */
+    .ps-pacman {
+      position: absolute; top: 50%; width: 16px; height: 16px;
+      background: #FFD700; border-radius: 50%;
+      transform: translateY(-50%);
+      transition: left 0.4s ease;
+      z-index: 2;
+      clip-path: polygon(50% 50%, 100% 25%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 75%);
+      animation: ps-chomp 0.22s linear infinite;
+      filter: drop-shadow(0 0 2px rgba(255,180,0,0.5));
     }
+    @keyframes ps-chomp {
+      0%, 100% { clip-path: polygon(50% 50%, 100% 20%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 80%); }
+      50%       { clip-path: polygon(50% 50%, 100% 48%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 52%); }
+    }
+    /* Ghosts */
+    .ps-ghost {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      font-size: 14px; line-height: 1;
+      transition: opacity 0.25s ease, transform 0.3s ease;
+      pointer-events: none; z-index: 3;
+    }
+    .ps-ghost.eaten { opacity: 0; transform: translate(-50%, -200%); }
     #pa-sticky-strip .ps-pct {
-      font-size: 11px; font-weight: 900; color: var(--accent); min-width: 34px; text-align: right;
+      font-size: 11px; font-weight: 900; color: var(--accent); min-width: 34px; text-align: right; flex-shrink: 0;
     }
     @media (max-width: 540px) {
-      #pa-sticky-strip { padding: 5px 14px; top: 62px; }
+      #pa-sticky-strip { padding: 4px 14px; top: 62px; }
     }
 
     /* HERO */
@@ -714,7 +737,14 @@
 <body>
 <div id="pa-sticky-strip">
   <span class="ps-label">Volledigheid</span>
-  <div class="ps-bar-wrap"><div class="ps-bar" id="ps-bar" style="width:0%"></div></div>
+  <div class="ps-game-area">
+    <div class="ps-bar-track"><div class="ps-bar" id="ps-bar" style="width:0%"></div></div>
+    <div class="ps-pacman" id="ps-pacman" style="left:0"></div>
+    <span class="ps-ghost" id="ps-ghost-1" style="left:25%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-2" style="left:50%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB8FF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-3" style="left:75%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#00FFFF" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+    <span class="ps-ghost" id="ps-ghost-4" style="left:100%"><svg width="14" height="16" viewBox="0 0 14 16" fill="#FFB852" xmlns="http://www.w3.org/2000/svg"><path d="M0 16V6a7 7 0 0 1 14 0v10l-2.33-2-2.34 2L7 14l-2.33 2L2.33 14 0 16z"/><circle cx="4.5" cy="7" r="1.5" fill="white"/><circle cx="9.5" cy="7" r="1.5" fill="white"/><circle cx="5" cy="7" r=".7" fill="#222"/><circle cx="10" cy="7" r=".7" fill="#222"/></svg></span>
+  </div>
   <span class="ps-pct" id="ps-pct">0%</span>
 </div>
 <div id="app"><div class="spin-wrap"><div class="spin"></div></div></div>
@@ -2051,11 +2081,22 @@ window.updateCompletenessBar = () => {
     else               sub.textContent = 'Uitstekend! We kunnen nu een scherpe prijs berekenen';
   }
 
-  // Sticky strip bovenaan de pagina
-  const sBar  = document.getElementById('ps-bar');
-  const sPct  = document.getElementById('ps-pct');
-  if (sBar)  sBar.style.width = pct + '%';
-  if (sPct)  sPct.textContent = pct + '%';
+  // Sticky strip — bar + Pac-Man + ghosts
+  const sBar   = document.getElementById('ps-bar');
+  const sPct   = document.getElementById('ps-pct');
+  const pacman = document.getElementById('ps-pacman');
+  if (sBar)   sBar.style.width = pct + '%';
+  if (sPct)   sPct.textContent = pct + '%';
+  if (pacman) {
+    const offset = Math.round(pct / 100 * 16);
+    pacman.style.left = `calc(${pct}% - ${offset}px)`;
+  }
+  [25, 50, 75, 100].forEach((threshold, i) => {
+    const ghost = document.getElementById(`ps-ghost-${i + 1}`);
+    if (!ghost) return;
+    if (pct >= threshold) ghost.classList.add('eaten');
+    else ghost.classList.remove('eaten');
+  });
 
   // Button-tekst aanpassen: check vs schatten
   const paBtn = document.getElementById('pa-btn');
