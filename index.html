@@ -1904,6 +1904,10 @@ async function pageAanbieden(el) {
   document.getElementById('fileInTekening').onchange = onTekeningSel;
   document.getElementById('fileInSection').onchange = onSectionPhotoSelect;
 
+  // Volledigheidsbar: update bij ELKE invoer in het formulier (input + change)
+  el.addEventListener('input',  () => window.updateCompletenessBar?.());
+  el.addEventListener('change', () => window.updateCompletenessBar?.());
+
   el.addEventListener('click', e => {
     const slot = e.target.closest('.photo-slot');
     if (slot && !e.target.closest('.rm-btn') && !slot.classList.contains('filled')) {
