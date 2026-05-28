@@ -87,34 +87,59 @@
     }
     /* Game area */
     .ps-game-area { flex: 1; position: relative; height: 22px; }
+    /* Dotted track — Pac-Man eet de stippen */
     .ps-bar-track {
       position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-      height: 6px; background: #ffd9c4; border-radius: 99px; overflow: hidden;
+      height: 6px; overflow: visible;
+      background: repeating-linear-gradient(
+        to right,
+        transparent 0px, transparent 2px,
+        rgba(255,107,53,0.35) 2px, rgba(255,107,53,0.35) 6px,
+        transparent 6px, transparent 11px
+      );
     }
-    .ps-bar { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s ease; }
+    /* Gegeten deel — bedekt stippen met achtergrondkleur */
+    .ps-bar {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: var(--accent-light);
+      transition: width 0.4s ease;
+    }
     /* Pac-Man */
     .ps-pacman {
       position: absolute; top: 50%; width: 16px; height: 16px;
       background: #FFD700; border-radius: 50%;
       transform: translateY(-50%);
       transition: left 0.4s ease;
-      z-index: 2;
-      clip-path: polygon(50% 50%, 100% 25%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 75%);
+      z-index: 4;
+      clip-path: polygon(50% 50%, 100% 20%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 80%);
       animation: ps-chomp 0.22s linear infinite;
-      filter: drop-shadow(0 0 2px rgba(255,180,0,0.5));
     }
     @keyframes ps-chomp {
       0%, 100% { clip-path: polygon(50% 50%, 100% 20%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 80%); }
-      50%       { clip-path: polygon(50% 50%, 100% 48%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 52%); }
+      50%       { clip-path: polygon(50% 50%, 100% 49%, 100% 0%, 0% 0%, 0% 100%, 100% 100%, 100% 51%); }
     }
-    /* Ghosts */
+    /* Ghosts — SVG inline, met pacing-animatie */
     .ps-ghost {
-      position: absolute; top: 50%; transform: translate(-50%, -50%);
-      font-size: 14px; line-height: 1;
-      transition: opacity 0.25s ease, transform 0.3s ease;
+      position: absolute; top: 50%;
+      transform: translate(-50%, -50%);
       pointer-events: none; z-index: 3;
+      display: flex; align-items: center;
     }
-    .ps-ghost.eaten { opacity: 0; transform: translate(-50%, -200%); }
+    .ps-ghost:not(.eaten) { animation: ps-ghost-pace 0.9s ease-in-out infinite; }
+    #ps-ghost-2:not(.eaten) { animation-delay: -0.23s; }
+    #ps-ghost-3:not(.eaten) { animation-delay: -0.46s; }
+    #ps-ghost-4:not(.eaten) { animation-delay: -0.68s; }
+    @keyframes ps-ghost-pace {
+      0%   { transform: translate(-50%, -50%) translateX(-3px); }
+      50%  { transform: translate(-50%, -50%) translateX(3px); }
+      100% { transform: translate(-50%, -50%) translateX(-3px); }
+    }
+    .ps-ghost.eaten {
+      opacity: 0 !important;
+      transform: translate(-50%, -280%) scale(0.4) !important;
+      transition: opacity 0.3s ease, transform 0.35s ease !important;
+      animation: none !important;
+    }
     #pa-sticky-strip .ps-pct {
       font-size: 11px; font-weight: 900; color: var(--accent); min-width: 34px; text-align: right; flex-shrink: 0;
     }
@@ -2081,21 +2106,35 @@ window.updateCompletenessBar = () => {
     else               sub.textContent = 'Uitstekend! We kunnen nu een scherpe prijs berekenen';
   }
 
-  // Sticky strip — bar + Pac-Man + ghosts
+  // Sticky strip — stippenpad + Pac-Man + vliegende spookjes
   const sBar   = document.getElementById('ps-bar');
   const sPct   = document.getElementById('ps-pct');
   const pacman = document.getElementById('ps-pacman');
+  // Gegeten deel bedekt stippen met achtergrondkleur
   if (sBar)   sBar.style.width = pct + '%';
   if (sPct)   sPct.textContent = pct + '%';
+  // Pac-Man beweegt mee, gecorrigeerd voor eigen breedte
   if (pacman) {
     const offset = Math.round(pct / 100 * 16);
     pacman.style.left = `calc(${pct}% - ${offset}px)`;
   }
-  [25, 50, 75, 100].forEach((threshold, i) => {
-    const ghost = document.getElementById(`ps-ghost-${i + 1}`);
+  // Spookjes: beginnen geclusterd vlak voor Pac-Man, vluchten naar hun drempel
+  [1, 2, 3, 4].forEach(j => {
+    const ghost = document.getElementById(`ps-ghost-${j}`);
     if (!ghost) return;
-    if (pct >= threshold) ghost.classList.add('eaten');
-    else ghost.classList.remove('eaten');
+    const threshold = j * 25; // 25, 50, 75, 100
+    if (pct >= threshold) {
+      ghost.classList.add('eaten');
+      return;
+    }
+    ghost.classList.remove('eaten');
+    // Startpositie: geclusterd vlak voor Pac-Man (3, 3.5, 4, 4.5%)
+    const startPos = 3 + (j - 1) * 0.5;
+    // Lerp richting drempel naarmate Pac-Man nadert
+    const lerpPos = startPos + (threshold - startPos) * (pct / threshold);
+    // Altijd minstens 2% voor Pac-Man, nooit verder dan drempel
+    const ghostPct = Math.min(Math.max(lerpPos, pct + 2), threshold);
+    ghost.style.left = ghostPct.toFixed(1) + '%';
   });
 
   // Button-tekst aanpassen: check vs schatten
