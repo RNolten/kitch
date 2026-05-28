@@ -1662,29 +1662,6 @@ async function pageAanbieden(el) {
       <div class="fg" style="max-width:180px"><label class="fl">Leeftijd (jaar)</label>
         <input id="f_age" class="fi" type="number" placeholder="5" min="0" max="50" oninput="updateAutoSummary();updateCompletenessBar()"></div>
 
-      <!-- PRIJSADVIES WIDGET -->
-      <div class="price-advisor-box" id="price-advisor-box">
-        <div class="price-advisor-head" onclick="togglePriceAdvisor()">
-          <div class="price-advisor-head-left">
-            <span style="font-size:18px">🤖</span>
-            <div>
-              <div class="price-advisor-head-label">AI Prijsadvies</div>
-              <div class="price-advisor-head-sub" id="pa-sub">Vul meer in voor een nauwkeuriger schatting</div>
-            </div>
-          </div>
-          <button class="price-advisor-btn" id="pa-btn" onclick="event.stopPropagation(); getPriceAdvice()">
-            Schat mijn prijs
-          </button>
-        </div>
-        <div class="pa-completeness">
-          <span class="pa-comp-label">Volledigheid</span>
-          <div class="pa-comp-bar-wrap"><div class="pa-comp-bar" id="pa-comp-bar" style="width:0%"></div></div>
-          <span class="pa-comp-pct" id="pa-comp-pct">0%</span>
-        </div>
-        <div class="price-advisor-body" id="pa-body">
-          <div id="pa-content"></div>
-        </div>
-      </div>
     </div>
 
     <!-- MATEN EN VORM -->
@@ -1908,6 +1885,30 @@ async function pageAanbieden(el) {
         </div>
       </div>
     </div>
+
+      <!-- PRIJSADVIES WIDGET -->
+      <div class="price-advisor-box" id="price-advisor-box">
+        <div class="price-advisor-head" onclick="togglePriceAdvisor()">
+          <div class="price-advisor-head-left">
+            <span style="font-size:18px">🤖</span>
+            <div>
+              <div class="price-advisor-head-label">AI Prijsadvies</div>
+              <div class="price-advisor-head-sub" id="pa-sub">Vul meer in voor een nauwkeuriger schatting</div>
+            </div>
+          </div>
+          <button class="price-advisor-btn" id="pa-btn" onclick="event.stopPropagation(); getPriceAdvice()">
+            Schat mijn prijs
+          </button>
+        </div>
+        <div class="pa-completeness">
+          <span class="pa-comp-label">Volledigheid</span>
+          <div class="pa-comp-bar-wrap"><div class="pa-comp-bar" id="pa-comp-bar" style="width:0%"></div></div>
+          <span class="pa-comp-pct" id="pa-comp-pct">0%</span>
+        </div>
+        <div class="price-advisor-body" id="pa-body">
+          <div id="pa-content"></div>
+        </div>
+      </div>
 
     <button class="submit-btn" id="sb" onclick="submitListing()" style="margin-bottom:48px">
       Advertentie plaatsen →
