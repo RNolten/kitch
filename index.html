@@ -1943,44 +1943,81 @@ window.updateAutoTitle = () => {
 
 // ── VOLLEDIGHEIDS SCORE ───────────────────────────────────────
 window.calculateCompleteness = () => {
-  const chipVal = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+  const chip = g => document.querySelector(`.chip[data-group="${g}"].sel`)?.getAttribute('data-val') || '';
+  const on   = id => document.getElementById(id)?.classList.contains('on') || false;
+  const fld  = id => (v(id) || '').trim();
   let score = 0;
 
-  // Kerngegevens (max 49 pts)
-  if ((v('f_merk')  || '').trim())  score += 12;  // merk bepaalt waarde
-  if (chipVal('conditie'))           score += 12;  // staat weegt zwaar
-  if ((v('f_age')   || '').trim())   score += 9;   // leeftijd cruciaal
-  if (chipVal('keuken_type'))        score += 7;   // vorm
-  if ((v('f_type')  || '').trim())   score += 5;   // serie/type
-  if ((v('f_kleur') || '').trim())   score += 4;   // kleur
+  // ── KERN (prijsbepalend) ──────────────────────────── max ~46
+  if (fld('f_merk'))      score += 10;
+  if (chip('conditie'))   score += 10;
+  if (fld('f_age'))       score += 8;
+  if (chip('keuken_type'))score += 6;
+  if (fld('f_type'))      score += 4;
+  if (fld('f_kleur'))     score += 3;
+  if (fld('f_p'))         score += 3;  // vraagprijs
+  if (fld('f_city'))      score += 2;  // stad
 
-  // Afmetingen & details (max 21 pts)
-  if ((v('f_buitenmaten')  || '').trim()) score += 8;
-  if ((v('f_kasten_onder') || '').trim()) score += 4;
-  if ((v('f_kasten_boven') || '').trim()) score += 3;
-  if ((v('f_kasten_hoog')  || '').trim()) score += 2;
-  if (chipVal('materiaal_blad'))           score += 4;
+  // ── MATEN & INDELING ─────────────────────────────── max ~12
+  if (fld('f_buitenmaten'))  score += 6;
+  if (fld('f_kasten_onder')) score += 2;
+  if (fld('f_kasten_boven')) score += 2;
+  if (fld('f_kasten_hoog'))  score += 1;
+  if (fld('f_kasten_hoogte'))score += 1;
 
-  // Apparatuur (max 16 pts)
+  // ── KEUKENBLAD ───────────────────────────────────── max ~8
+  if (chip('materiaal_blad')) score += 4;
+  if (fld('f_blad_dikte'))    score += 2;
+  if (fld('f_blad_kleur'))    score += 1;
+  if (on('tgl_achterwand') || on('tgl_spatrand')) score += 1;
+
+  // ── SPOELBAK ─────────────────────────────────────── max ~5
+  if (chip('spoelbak_materiaal')) score += 2;
+  if (chip('spoelbak_montage'))   score += 1;
+  if (chip('spoelbak_config'))    score += 1;
+  if (fld('f_spoelbak_kleur'))    score += 1;
+
+  // ── KRAAN ────────────────────────────────────────── max ~6
+  if (chip('kraan_montage'))  score += 2;
+  if (fld('f_kraan_kleur'))   score += 1;
+  if (on('tgl_kokend'))       score += 1;
+  if (on('tgl_uitrek'))       score += 1;
+  if (chip('kraan_greep'))    score += 1;
+
+  // ── KASTEN ───────────────────────────────────────── max ~4
+  if (chip('kasten_greep'))   score += 1;
+  if (on('tgl_verlichting'))  score += 1;
+  if (on('tgl_softclose'))    score += 1;
+  if (fld('f_kasten_notitie'))score += 1;
+
+  // ── APPARATUUR ───────────────────────────────────── max ~10
   const apps = pendingApparatuur || [];
   if (apps.length > 0) {
-    score += 5;
+    score += 4;
     const withMerk = apps.filter(a => a.merk && a.merk.trim()).length;
-    score += Math.round(8 * withMerk / apps.length);
-    score += Math.min(3, apps.length - 1); // meer apparaten = rijker beeld
+    score += Math.round(4 * withMerk / apps.length);
+    score += Math.min(2, apps.length - 1);
   }
 
-  // Foto's (max 18 pts) — alle foto's tellen mee: overzicht + sectiefotos
-  const nFotos = (pendingPhotos || []).length
-    + Object.values(pendingSectionPhotos || {}).reduce((s, arr) => s + arr.length, 0);
-  score += nFotos >= 8 ? 18 : nFotos >= 5 ? 14 : nFotos >= 3 ? 10 : nFotos >= 1 ? 6 : 0;
+  // ── VERVOER & DEMONTAGE ──────────────────────────── max ~4
+  if (chip('ophalen_bezorgen')) score += 2;
+  if (chip('demontage'))        score += 2;
 
-  // Beschrijving (max 8 pts)
-  const desc = (v('f_desc') || '').trim();
+  // ── MAATTEKENINGEN ───────────────────────────────── max ~3
+  if ((pendingTekeningen || []).length > 0) score += 3;
+
+  // ── FOTO'S (alle) ────────────────────────────────── max ~15
+  const nFotos = (pendingPhotos || []).length
+    + Object.values(pendingSectionPhotos || {}).reduce((s, a) => s + a.length, 0);
+  score += nFotos >= 8 ? 15 : nFotos >= 5 ? 12 : nFotos >= 3 ? 8 : nFotos >= 1 ? 4 : 0;
+
+  // ── BESCHRIJVING ─────────────────────────────────── max ~8
+  const desc = fld('f_desc');
   score += desc.length > 100 ? 8 : desc.length > 20 ? 5 : desc.length > 0 ? 2 : 0;
 
-  // Denominator 75: elk veld geeft een zichtbare sprong (~7-16%), 100% is haalbaar maar vraagt aandacht
-  return Math.min(100, Math.round(score * 100 / 75));
+  // Max bereikbaar ≈ 121 punten — schaal naar 100% via deler 85
+  // Zo geeft elk veld een zichtbare sprong en is 100% haalbaar met een uitstekende advertentie
+  return Math.min(100, Math.round(score * 100 / 85));
 };
 
 window.updateCompletenessBar = () => {
@@ -2191,6 +2228,7 @@ window.rmSectionPhoto = (section, i) => {
 window.toggleBtn = id => {
   document.getElementById(id).classList.toggle('on');
   window.updateAutoSummary?.();
+  window.updateCompletenessBar?.();
 };
 
 function onTekeningSel(e) {
